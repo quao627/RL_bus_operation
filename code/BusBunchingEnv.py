@@ -68,6 +68,7 @@ class Bus:
         yield self.simpy_env.timeout(self.starting_time)
         self.env.data[self.cur_station.idx].append(self.simpy_env.now)
         pax_data[self.idx].append(self.num_pax)
+        
 
         # each cycle is a trip from one station to the next
         while True:
@@ -75,11 +76,12 @@ class Bus:
 
             # drive till the next station
             yield self.simpy_env.timeout(self.next_travel_time)
-            if (self.simpy_env.now > self.starting_time) and (self.next_station.idx == 0):
+            if (self.simpy_env.now > self.starting_time) and (self.next_station.idx == 0):#terminal station?
                 if (self.simpy_env.now < self.env.departure_times[-1] + HEADWAY):
                     self.env.departure_times.append(self.env.departure_times[-1] + HEADWAY)
                     yield self.simpy_env.timeout(self.env.departure_times[-2] + HEADWAY - self.simpy_env.now)
-            
+            print ("next",self.next_station.idx)
+            print ("cur",self.cur_station.idx )
             self.env.data[self.next_station.idx].append(self.simpy_env.now)
             pax_data[self.idx].append(self.num_pax)
 
@@ -108,10 +110,10 @@ class Bus:
             self.l_action = l_action
             # 0 means holding
 
-            if h_action == 0 or self.next_station.idx in [N_STATION-1, int(N_STATION//2)-1]:
+            if h_action == 0 or self.next_station.idx in [N_STATION-1, int(N_STATION//2)-1]:# TODO middle station cannot use holding method? why
                 with self.next_station.request() as req:
                     yield req
-                    self.station_enter_time = self.simpy_env.now
+                    self.station_enter_time = self.simpy_env.now # TODO useless? station_enter_time = self.env.departure_times[-1] + HEADWAY
                 #print(f'Bus {self.idx} Arrives At Station {self.next_station.idx}')
                 
                     if self.env.allow_skipping:
@@ -173,16 +175,16 @@ class Bus:
         Return:
             the number of passengers that are boarding
         """
-        passengers_left = []
+        passengers_leave = []
         for pax in self.passengers:
             if pax.alight_station != station.idx:
                 pax.bus = None
-                passengers_left.append(pax)
+                passengers_leave.append(pax)
                 pax.new_status = 2
             else:
                 pax.new_status = 3
         num_pax = len(self.passengers)
-        station.passengers.extend(passengers_left)
+        station.passengers.extend(passengers_leave)
         station.passengers.sort(key=lambda x: x.start_time)
         self.passengers = []
         self.num_pax = 0
@@ -228,7 +230,7 @@ class Bus:
         passengers = []
         n = 0
         for pax in station.passengers:
-            if (pax.start_time < self.simpy_env.now) and (pax.bus is None) and (not STOP_BOARDING):
+            if (pax.start_time < self.simpy_env.now) and (pax.bus is None) and (not STOP_BOARDING) and (not pax.status==4):
                 pax.bus = self.idx
                 self.passengers.append(pax)
                 self.num_pax += 1
@@ -325,6 +327,15 @@ class Station:
     def get_num_pax(self):
         t = self.simpy_env.now
         return len([pax for pax in self.passengers if pax.start_time < t])
+
+
+total_pax_num_sys=[]
+total_pax_num_on_bus=[]
+total_pax_num_leave=[]
+waiting_time_list=[]
+on_bus_time_list=[]
+indiv_waiting_time_list=[]
+env_now_list=[]
 
 class Env(gym.Env):
     def __init__(self, holding_only=True, skipping_only=False, turning_only=False, mode='headway') -> None:
@@ -513,21 +524,38 @@ class Env(gym.Env):
         alpha, beta = 1, 1
         waiting_time = 0
         on_bus_time = 0
-
+        n_leave_pax=0
         n_waiting_pax = 0
         n_on_bus_pax = 0
         for pax in self.passengers:
             if pax.status in [0, 2] and pax.last_time < self.env.now:
                 waiting_time += self.env.now - pax.last_time
-                n_waiting_pax += 1
+                indiv_waiting_time_list.append(self.env.now - pax.last_time)
+                if self.env.now - pax.last_time >= 200:
+                    n_leave_pax+=1
+                    pax.status=4 # leave
+                else:
+                    n_waiting_pax += 1
             elif pax.status == 1 and pax.last_time < self.env.now:
                 on_bus_time += self.env.now - pax.last_time
                 n_on_bus_pax += 1
-            if pax.last_time < self.env.now:
+            if pax.last_time < self.env.now and pax.status in [0,1,2,3]:
                 pax.last_time = self.env.now
                 pax.status = pax.new_status
-        # print('total num of pax: ', len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2]))
+        # print('total num of pax in the sys: ', len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
         # print('total num of pax on bus: ', len([pax for pax in self.passengers if pax.status == 1]))    
+        # print('total num of pax leave: ', len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4])) 
+
+        total_pax_num_sys.append(len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
+        total_pax_num_on_bus.append(len([pax for pax in self.passengers if pax.status == 1]))
+        total_pax_num_leave.append(len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4]))
+        env_now_list.append(self.env.now)
+       
+        waiting_time_list.append(waiting_time)
+        on_bus_time_list.append(on_bus_time)
+        
+        #print('num of pax leave: ', n_leave_pax)
+           
         reward = alpha * waiting_time / max(1, n_waiting_pax) + beta * on_bus_time / max(1, n_on_bus_pax)
         self.acc_waiting_time += waiting_time
         self.acc_on_bus_time += on_bus_time
@@ -547,14 +575,16 @@ class Env(gym.Env):
         return self.travel_times[station1.idx, int(self.env.now // TRAVEL_TIME_STEP)]
 
 
+
+
 @dataclass
 class Passenger:
     start_time: float
     alight_station: int
     last_time: float
     bus: Bus = None
-    status: int = 0 # 0: waiting, 1: on bus, 2: alighted and waiting, 3: alighted
-    new_status: int = 0 # 0: waiting, 1: on bus, 2: alighted and waiting, 3: alighted
+    status: int = 0 # 0: waiting, 1: on bus, 2: alighted, 4: leave
+    new_status: int = 0 # 0: waiting, 1: on bus, 2: alighted
 
 
 
@@ -566,7 +596,7 @@ if __name__ == '__main__':
     total_reward = 0
     cnt = 0
     print(time.time())
-    while env.env.peek() < HORIZON - 2000:
+    while env.env.peek() < HORIZON - 15000:
         action = random.randint(0, 1)
         obs, rew, done, info = env.step(action)
         total_reward += rew
@@ -589,3 +619,67 @@ if __name__ == '__main__':
     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
     print('Total reward: ', total_reward)
     print('Cnt: ', cnt)
+
+    import matplotlib.pyplot as plt
+    plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(total_pax_num_sys, color='red')
+    plt.xlabel('total_pax_num_sys')
+    plt.ylabel('Frequency')
+    plt.title('total_pax_num_sys Histogram')
+    plt.show()
+
+    plt.hist(total_pax_num_on_bus, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(total_pax_num_on_bus, color='red')
+    plt.xlabel('total_pax_num_on_bus')
+    plt.ylabel('Frequency')
+    plt.title('total_pax_num_on_bus Histogram')
+    plt.show()
+
+    plt.hist(total_pax_num_leave, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(total_pax_num_leave, color='red')
+    plt.xlabel('total_pax_num_leave')
+    plt.ylabel('Frequency')
+    plt.title('total_pax_num_leave Histogram')
+    plt.show()
+
+    plt.hist(waiting_time_list, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(waiting_time_list, color='red')
+    plt.xlabel('Waiting Time')
+    plt.ylabel('Frequency')
+    plt.title('Waiting Time Histogram')
+    plt.show()
+
+    plt.hist(on_bus_time_list, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(on_bus_time_list, color='red')
+    plt.xlabel('On Bus Time Time')
+    plt.ylabel('Frequency')
+    plt.title('On Bus Time Histogram')
+    plt.show()
+
+    plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(indiv_waiting_time_list, color='red')
+    plt.xlabel('Individual Waiting Time')
+    plt.ylabel('Frequency')
+    plt.title('Individual Waiting Time Histogram')
+    plt.show()
+
+    plt.scatter(env_now_list, total_pax_num_sys)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number System')
+    plt.title('Scatter Plot')
+    plt.show()
+
+    plt.scatter(env_now_list, total_pax_num_on_bus)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number On Bus')
+    plt.title('Scatter Plot')
+    plt.show()
+
+    plt.scatter(env_now_list, total_pax_num_leave)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number Leave')
+    plt.title('Scatter Plot')
+    plt.show()
+
+
+    ###
