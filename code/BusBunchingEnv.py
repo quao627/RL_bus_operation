@@ -100,6 +100,7 @@ class Bus:
 
             # high-level and low-level actions
             h_action, l_action = self.env.action
+            h_action_list.append(h_action)
             if h_action == 0:
                 l_action = l_action[0] * THRESHOLD
             elif h_action == 2:
@@ -336,7 +337,8 @@ waiting_time_list=[]
 on_bus_time_list=[]
 indiv_waiting_time_list=[]
 env_now_list=[]
-
+status_list=[]
+h_action_list=[]
 class Env(gym.Env):
     def __init__(self, holding_only=True, skipping_only=False, turning_only=False, mode='headway') -> None:
         self.travel_times = TABLE_TRAVEL_TIME
@@ -528,6 +530,7 @@ class Env(gym.Env):
         n_waiting_pax = 0
         n_on_bus_pax = 0
         for pax in self.passengers:
+            status_list.append(pax.status)
             if pax.status in [0, 2] and pax.last_time < self.env.now:
                 waiting_time += self.env.now - pax.last_time
                 indiv_waiting_time_list.append(self.env.now - pax.last_time)
@@ -542,17 +545,17 @@ class Env(gym.Env):
             if pax.last_time < self.env.now and pax.status in [0,1,2,3]:
                 pax.last_time = self.env.now
                 pax.status = pax.new_status
+            
         # print('total num of pax in the sys: ', len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
         # print('total num of pax on bus: ', len([pax for pax in self.passengers if pax.status == 1]))    
         # print('total num of pax leave: ', len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4])) 
         if len(total_pax_num_leave)>=2:
             if total_pax_num_leave[-1]-total_pax_num_leave[-2]>300:
                 print("...")
-        total_pax_num_sys.append(len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
+        total_pax_num_sys.append(len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 3 and pax.status != 4]))
         total_pax_num_on_bus.append(len([pax for pax in self.passengers if pax.status == 1]))
         total_pax_num_leave.append(len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4]))
         env_now_list.append(self.env.now)
-       
         waiting_time_list.append(waiting_time)
         on_bus_time_list.append(on_bus_time)
         
@@ -585,9 +588,8 @@ class Passenger:
     alight_station: int
     last_time: float
     bus: Bus = None
-    status: int = 0 # 0: waiting, 1: on bus, 2: alighted, 4: leave
-    new_status: int = 0 # 0: waiting, 1: on bus, 2: alighted
-
+    status: int = 0 # 0: waiting, 1: on bus, 2: alighted and waiting, 3: alighted, 4: leave
+    new_status: int = 0 
 
 
 if __name__ == '__main__':
