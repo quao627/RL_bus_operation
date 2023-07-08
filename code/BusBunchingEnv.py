@@ -80,8 +80,8 @@ class Bus:
                 if (self.simpy_env.now < self.env.departure_times[-1] + HEADWAY):
                     self.env.departure_times.append(self.env.departure_times[-1] + HEADWAY)
                     yield self.simpy_env.timeout(self.env.departure_times[-2] + HEADWAY - self.simpy_env.now)
-            print ("next",self.next_station.idx)
-            print ("cur",self.cur_station.idx )
+            # print ("next",self.next_station.idx)
+            # print ("cur",self.cur_station.idx )
             self.env.data[self.next_station.idx].append(self.simpy_env.now)
             pax_data[self.idx].append(self.num_pax)
 
@@ -175,16 +175,16 @@ class Bus:
         Return:
             the number of passengers that are boarding
         """
-        passengers_leave = []
+        passengers_left = []
         for pax in self.passengers:
             if pax.alight_station != station.idx:
                 pax.bus = None
-                passengers_leave.append(pax)
+                passengers_left.append(pax)
                 pax.new_status = 2
             else:
                 pax.new_status = 3
         num_pax = len(self.passengers)
-        station.passengers.extend(passengers_leave)
+        station.passengers.extend(passengers_left)
         station.passengers.sort(key=lambda x: x.start_time)
         self.passengers = []
         self.num_pax = 0
@@ -545,7 +545,9 @@ class Env(gym.Env):
         # print('total num of pax in the sys: ', len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
         # print('total num of pax on bus: ', len([pax for pax in self.passengers if pax.status == 1]))    
         # print('total num of pax leave: ', len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4])) 
-
+        if len(total_pax_num_leave)>=2:
+            if total_pax_num_leave[-1]-total_pax_num_leave[-2]>300:
+                print("...")
         total_pax_num_sys.append(len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 2 and pax.status != 4]))
         total_pax_num_on_bus.append(len([pax for pax in self.passengers if pax.status == 1]))
         total_pax_num_leave.append(len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4]))
@@ -619,82 +621,94 @@ if __name__ == '__main__':
     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
     print('Total reward: ', total_reward)
     print('Cnt: ', cnt)
-
+    
     import matplotlib.pyplot as plt
-    plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(total_pax_num_sys, color='red',label='Kernel Density')
-    plt.xlabel('The Total Number of Passengers in the System')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Total Number of Passengers in the System Histogram')
-    plt.savefig('total_pax_num_sys.png') 
-    plt.show()
+    # plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(total_pax_num_sys, color='red',label='Kernel Density')
+    # plt.xlabel('The Total Number of Passengers in the System')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Total Number of Passengers in the System Histogram')
+    # plt.savefig('total_pax_num_sys.png') 
+    # plt.show()
 
-    plt.hist(total_pax_num_on_bus, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(total_pax_num_on_bus, color='red',label='Kernel Density')
-    plt.xlabel('The Total Number of Passengers on the Buses')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Total Number of Passengers on the Buses Histogram')
-    plt.savefig('total_pax_num_on_bus.png') 
-    plt.show()
+    # plt.hist(total_pax_num_on_bus, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(total_pax_num_on_bus, color='red',label='Kernel Density')
+    # plt.xlabel('The Total Number of Passengers on the Buses')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Total Number of Passengers on the Buses Histogram')
+    # plt.savefig('total_pax_num_on_bus.png') 
+    # plt.show()
 
-    plt.hist(total_pax_num_leave, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(total_pax_num_leave, color='red',label='Kernel Density')
-    plt.xlabel('The Total Number of Passengers Leaving the System')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Total Number of Passengers Leaving the System Histogram')
-    plt.savefig('total_pax_num_leave.png') 
-    plt.show()
+    # plt.hist(total_pax_num_leave, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(total_pax_num_leave, color='red',label='Kernel Density')
+    # plt.xlabel('The Total Number of Passengers Leaving the System')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Total Number of Passengers Leaving the System Histogram')
+    # plt.savefig('total_pax_num_leave.png') 
+    # plt.show()
 
-    plt.hist(waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(waiting_time_list, color='red',label='Kernel Density')
-    plt.xlabel('Waiting Time')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Waiting Time Histogram')
-    plt.savefig('waiting_time_histogram.png') 
-    plt.show()
+    # plt.hist(waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(waiting_time_list, color='red',label='Kernel Density')
+    # plt.xlabel('Waiting Time')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Waiting Time Histogram')
+    # plt.savefig('waiting_time_histogram.png') 
+    # plt.show()
 
-    plt.hist(on_bus_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(on_bus_time_list, color='red',label='Kernel Density')
-    plt.xlabel('On Bus Time Time')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('On Bus Time Histogram')
-    plt.savefig('on_bus_time_histogram.png') 
-    plt.show()
+    # plt.hist(on_bus_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(on_bus_time_list, color='red',label='Kernel Density')
+    # plt.xlabel('On Bus Time Time')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('On Bus Time Histogram')
+    # plt.savefig('on_bus_time_histogram.png') 
+    # plt.show()
 
-    plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    sns.kdeplot(indiv_waiting_time_list, color='red',label='Kernel Density')
-    plt.xlabel('Individual Waiting Time')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Individual Waiting Time Histogram')
-    plt.savefig('indiv_waiting_time_histogram.png') 
-    plt.show()
+    # plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+    # sns.kdeplot(indiv_waiting_time_list, color='red',label='Kernel Density')
+    # plt.xlabel('Individual Waiting Time')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Individual Waiting Time Histogram')
+    # plt.savefig('indiv_waiting_time_histogram.png') 
+    # plt.show()
 
-    plt.scatter(env_now_list, total_pax_num_sys)
+    # plt.scatter(env_now_list, total_pax_num_sys)
+    # plt.xlabel('Time (self.env.now)')
+    # plt.ylabel('Total Pax Number in the System')
+    # plt.title('Scatter Plot of Total Pax Number VS Time')
+    # plt.savefig('total_pax_num_sys_vs_time.png') 
+    # plt.show()
+
+    # plt.scatter(env_now_list, total_pax_num_on_bus)
+    # plt.xlabel('Time (self.env.now)')
+    # plt.ylabel('Total Pax Number on Bus')
+    # plt.title('Scatter Plot of Total Pax Number on Bus VS Time')
+    # plt.savefig('total_pax_num_on_bus_vs_time.png')
+    # plt.show()
+
+    # plt.scatter(env_now_list, total_pax_num_leave)
+    # plt.xlabel('Time (self.env.now)')
+    # plt.ylabel('Total Pax Number Leaving the System')
+    # plt.title('Scatter Plot of Total Pax Number Leaving VS Time')
+    # plt.savefig('total_pax_num_leave_vs_time.png')
+    # plt.show()
+
+
+    plt.scatter(env_now_list, total_pax_num_sys, label='Total Pax Number in the System',s=5)
+    plt.scatter(env_now_list, total_pax_num_on_bus, label='Total Pax Number on Bus',s=5)
+    plt.scatter(env_now_list, total_pax_num_leave, label='Total Pax Number Leaving the System',s=5)
+
     plt.xlabel('Time (self.env.now)')
-    plt.ylabel('Total Pax Number in the System')
+    plt.ylabel('Total Pax Number')
     plt.title('Scatter Plot of Total Pax Number VS Time')
-    plt.savefig('total_pax_num_sys_vs_time.png') 
+
+    plt.legend()
+
+    plt.savefig('combined_scatter_plot.png')
     plt.show()
 
-    plt.scatter(env_now_list, total_pax_num_on_bus)
-    plt.xlabel('Time (self.env.now)')
-    plt.ylabel('Total Pax Number on Bus')
-    plt.title('Scatter Plot of Total Pax Number on Bus VS Time')
-    plt.savefig('total_pax_num_on_bus_vs_time.png')
-    plt.show()
-
-    plt.scatter(env_now_list, total_pax_num_leave)
-    plt.xlabel('Time (self.env.now)')
-    plt.ylabel('Total Pax Number Leaving the System')
-    plt.title('Scatter Plot of Total Pax Number Leaving VS Time')
-    plt.savefig('total_pax_num_leave_vs_time.png')
-    plt.show()
-
-
-    ###
