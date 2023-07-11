@@ -13,6 +13,54 @@ import simpy
 from simpy.events import AnyOf, AllOf, Event
 
 from utils import *
+from typing import List, Dict, Union
+from dataclasses import dataclass
+import pickle
+import json
+import time
+import random
+from itertools import chain
+
+import gym
+from gym.spaces import Box, Discrete, Tuple
+from gym.utils import seeding
+import simpy
+from simpy.events import AnyOf, AllOf, Event
+import numpy as np
+
+class QLearningAgent:
+    def __init__(self, action_space, state_space, alpha=0.5, gamma=0.95, epsilon=0.1):
+        self.action_space = action_space
+        self.state_space = state_space
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.q_table = np.zeros((state_space, action_space))
+
+    def action(self, state):
+        # Epsilon-greedy action selection
+        if np.random.uniform(0, 1) < self.epsilon:
+            return self.action_space.sample()  # Explore: select a random action
+        else:
+            return np.argmax(self.q_table[state, :])  # Exploit: select the action with max value (greedy)
+
+    def update(self, state, action, reward, next_state):
+        old_value = self.q_table[state, action]
+        next_max = np.max(self.q_table[next_state, :])
+
+        # Update Q-value for the current state and action
+        new_value = (1 - self.alpha) * old_value + self.alpha * (reward + self.gamma * next_max)
+        self.q_table[state, action] = new_value
+
+
+# Agent Definition
+class RandomAgent:
+    def __init__(self, action_space):
+        self.action_space = action_space
+
+    def action(self, obs):
+        return self.action_space.sample()
+
 
 num_skipping_stop = 0
 num_total_stop = 0
@@ -596,126 +644,205 @@ class Passenger:
     bus: Bus = None
     status: int = 0 # 0: waiting, 1: on bus, 2: alighted and waiting, 3: alighted, 4: leave
     new_status: int = 0 
-
+    
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    env = Env(**{'holding_only': False, 'skipping_only': False, 'turning_only': False, 'mode': 'waiting_time_station'})
-    env.reset()
-    print(env.mode)
-    action = (0, (0, 0))
-    total_reward = 0
-    cnt = 0
-    print(time.time())
-    while env.env.peek() < HORIZON - 15000:
-        obs, rew, done, info = env.step(action)
-        total_reward += rew
-        cnt += 1
-        # if r < 0.1 and env.allow_skipping:
-        #     action = (1, 0)
-        # elif r < 0.2:
-        #     action = (2, 1)
-        # else:
-        #     action = policy(obs)
-        # action = env.action_space.sample()   
-        # action = (1, (0, 0)) if env.allow_skipping else (0, (0, 0))
-        # action = (0, (0, 0))
-        # print(f'Current time: {env.env.now}')
-    # pickle.dump(env.data, open('data.pkl', 'wb'))
-    # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
-    print(time.time())
-    print('Total waiting time: ', env.acc_waiting_time)
-    print('Total on bus time: ', env.acc_on_bus_time)
-    print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
-    print('Total reward: ', total_reward)
-    print('Cnt: ', cnt)
+    # Define levels of difficulty
+    difficulty_levels = [{'holding_only': True, 'skipping_only': False, 'turning_only': False},
+                         {'holding_only': False, 'skipping_only': True, 'turning_only': False},
+                         {'holding_only': False, 'skipping_only': False, 'turning_only': True},
+                         {'holding_only': True, 'skipping_only': False, 'turning_only': True}]
     
-    import matplotlib.pyplot as plt
-    # plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(total_pax_num_sys, color='red',label='Kernel Density')
-    # plt.xlabel('The Total Number of Passengers in the System')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Total Number of Passengers in the System Histogram')
-    # plt.savefig('total_pax_num_sys.png') 
-    # plt.show()
+    # Progress criteria (example: achieving a certain average reward over 100 episodes)
+    TARGET_AVG_REWARD = -0
+    def progress_criteria(avg_reward):
+        return avg_reward >= TARGET_AVG_REWARD
 
-    # plt.hist(total_pax_num_on_bus, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(total_pax_num_on_bus, color='red',label='Kernel Density')
-    # plt.xlabel('The Total Number of Passengers on the Buses')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Total Number of Passengers on the Buses Histogram')
-    # plt.savefig('total_pax_num_on_bus.png') 
-    # plt.show()
+    # Initialize dictionary to store total rewards for each level
+    rewards_dict = {i: [] for i in range(len(difficulty_levels))}
 
-    # plt.hist(total_pax_num_leave, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(total_pax_num_leave, color='red',label='Kernel Density')
-    # plt.xlabel('The Total Number of Passengers Leaving the System')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Total Number of Passengers Leaving the System Histogram')
-    # plt.savefig('total_pax_num_leave.png') 
-    # plt.show()
+    # Training loop
+    for i, level in enumerate(difficulty_levels):
+        # Initialize environment
+        env = Env(**level, mode='waiting_time_station')
+        # Initialize agent
+        agent = RandomAgent(env.action_space)
 
-    # plt.hist(waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(waiting_time_list, color='red',label='Kernel Density')
-    # plt.xlabel('Waiting Time')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Waiting Time Histogram')
-    # plt.savefig('waiting_time_histogram.png') 
-    # plt.show()
+        # Number of episodes
+        n_episodes = 1
 
-    # plt.hist(on_bus_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(on_bus_time_list, color='red',label='Kernel Density')
-    # plt.xlabel('On Bus Time Time')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('On Bus Time Histogram')
-    # plt.savefig('on_bus_time_histogram.png') 
-    # plt.show()
+        # Loop over episodes
+        for i_episode in range(n_episodes):
+            
+            # Reset state
+            observation = env.reset()
 
-    # plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(indiv_waiting_time_list, color='red',label='Kernel Density')
-    # plt.xlabel('Individual Waiting Time')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Individual Waiting Time Histogram')
-    # plt.savefig('indiv_waiting_time_histogram.png') 
-    # plt.show()
+            # One episode loop
+            for t in range(1000):
+                # Agent makes action
+                action = agent.action(observation)
 
-    # plt.scatter(env_now_list, total_pax_num_sys)
-    # plt.xlabel('Time (self.env.now)')
-    # plt.ylabel('Total Pax Number in the System')
-    # plt.title('Scatter Plot of Total Pax Number VS Time')
-    # plt.savefig('total_pax_num_sys_vs_time.png') 
-    # plt.show()
+                # Apply action to the environment
+                observation, reward, done, info = env.step(action)
+                
+                # If the episode is done, reset the environment
+                if done:
+                    print(f"Episode finished after {t+1} timesteps")
+                    break
+            obs = env.reset()
+            action = 0  # Initialize action
+            while env.env.peek() < HORIZON - 15000:
+                obs, reward, done, info = env.step(action)  # Execute action
+                rewards_dict[i].append(reward)  # Store reward
+                # Progress criteria check and level up if criteria met
+                if len(rewards_dict[i]) >= 100 and progress_criteria(sum(rewards_dict[i][-100:]) / 100):
+                    print(f"Progress criteria met at level {i+1}, moving to next level.")
+                    break  # Progress to the next difficulty level
+                # if done:
+                #     print(f"Failed to meet progress criteria at level {i+1}, repeating level.")
+                #     obs = env.reset()  # Reset environment for the same level
+                #     rewards_dict[i] = []  # Clear rewards for the current level
 
-    # plt.scatter(env_now_list, total_pax_num_on_bus)
-    # plt.xlabel('Time (self.env.now)')
-    # plt.ylabel('Total Pax Number on Bus')
-    # plt.title('Scatter Plot of Total Pax Number on Bus VS Time')
-    # plt.savefig('total_pax_num_on_bus_vs_time.png')
-    # plt.show()
+    # Initialize figure for plotting
+    plt.figure(figsize=(10, 6))
 
-    # plt.scatter(env_now_list, total_pax_num_leave)
-    # plt.xlabel('Time (self.env.now)')
-    # plt.ylabel('Total Pax Number Leaving the System')
-    # plt.title('Scatter Plot of Total Pax Number Leaving VS Time')
-    # plt.savefig('total_pax_num_leave_vs_time.png')
-    # plt.show()
+    # Plot the rewards progress for each level
+    for i, level in enumerate(difficulty_levels):
+        plt.plot(rewards_dict[i], label=f"Level {i+1}: {level}")
 
-
-    plt.scatter(env_now_list, total_pax_num_sys, label='Total Pax Number in the System',s=5)
-    plt.scatter(env_now_list, total_pax_num_on_bus, label='Total Pax Number on Bus',s=5)
-    plt.scatter(env_now_list, total_pax_num_leave, label='Total Pax Number Leaving the System',s=5)
-
-    plt.xlabel('Time (self.env.now)')
-    plt.ylabel('Total Pax Number')
-    plt.title('Scatter Plot of Total Pax Number VS Time')
-
+    # Add title, labels, and legend to the plot
+    plt.title("Rewards Progress for Each Level")
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
     plt.legend()
 
-    plt.savefig('combined_scatter_plot.png')
+    # Display the plot
     plt.show()
+
+
+
+
+
+# if __name__ == '__main__':
+#     env = Env(**{'holding_only': False, 'skipping_only': False, 'turning_only': False, 'mode': 'waiting_time_station'})
+#     env.reset()
+#     print(env.mode)
+#     action = (0, (0, 0))
+#     total_reward = 0
+#     cnt = 0
+#     print(time.time())
+#     while env.env.peek() < HORIZON - 15000:
+#         obs, rew, done, info = env.step(action)
+#         total_reward += rew
+#         cnt += 1
+#         # if r < 0.1 and env.allow_skipping:
+#         #     action = (1, 0)
+#         # elif r < 0.2:
+#         #     action = (2, 1)
+#         # else:
+#         #     action = policy(obs)
+#         # action = env.action_space.sample()   
+#         # action = (1, (0, 0)) if env.allow_skipping else (0, (0, 0))
+#         # action = (0, (0, 0))
+#         # print(f'Current time: {env.env.now}')
+#     # pickle.dump(env.data, open('data.pkl', 'wb'))
+#     # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
+#     print(time.time())
+#     print('Total waiting time: ', env.acc_waiting_time)
+#     print('Total on bus time: ', env.acc_on_bus_time)
+#     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
+#     print('Total reward: ', total_reward)
+#     print('Cnt: ', cnt)
+    
+    
+#     # import matplotlib.pyplot as plt
+#     # # plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(total_pax_num_sys, color='red',label='Kernel Density')
+#     # # plt.xlabel('The Total Number of Passengers in the System')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('Total Number of Passengers in the System Histogram')
+#     # # plt.savefig('total_pax_num_sys.png') 
+#     # # plt.show()
+
+#     # # plt.hist(total_pax_num_on_bus, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(total_pax_num_on_bus, color='red',label='Kernel Density')
+#     # # plt.xlabel('The Total Number of Passengers on the Buses')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('Total Number of Passengers on the Buses Histogram')
+#     # # plt.savefig('total_pax_num_on_bus.png') 
+#     # # plt.show()
+
+#     # # plt.hist(total_pax_num_leave, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(total_pax_num_leave, color='red',label='Kernel Density')
+#     # # plt.xlabel('The Total Number of Passengers Leaving the System')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('Total Number of Passengers Leaving the System Histogram')
+#     # # plt.savefig('total_pax_num_leave.png') 
+#     # # plt.show()
+
+#     # # plt.hist(waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(waiting_time_list, color='red',label='Kernel Density')
+#     # # plt.xlabel('Waiting Time')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('Waiting Time Histogram')
+#     # # plt.savefig('waiting_time_histogram.png') 
+#     # # plt.show()
+
+#     # # plt.hist(on_bus_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(on_bus_time_list, color='red',label='Kernel Density')
+#     # # plt.xlabel('On Bus Time Time')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('On Bus Time Histogram')
+#     # # plt.savefig('on_bus_time_histogram.png') 
+#     # # plt.show()
+
+#     # # plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
+#     # # sns.kdeplot(indiv_waiting_time_list, color='red',label='Kernel Density')
+#     # # plt.xlabel('Individual Waiting Time')
+#     # # plt.ylabel('Frequency')
+#     # # plt.legend()
+#     # # plt.title('Individual Waiting Time Histogram')
+#     # # plt.savefig('indiv_waiting_time_histogram.png') 
+#     # # plt.show()
+
+#     # # plt.scatter(env_now_list, total_pax_num_sys)
+#     # # plt.xlabel('Time (self.env.now)')
+#     # # plt.ylabel('Total Pax Number in the System')
+#     # # plt.title('Scatter Plot of Total Pax Number VS Time')
+#     # # plt.savefig('total_pax_num_sys_vs_time.png') 
+#     # # plt.show()
+
+#     # # plt.scatter(env_now_list, total_pax_num_on_bus)
+#     # # plt.xlabel('Time (self.env.now)')
+#     # # plt.ylabel('Total Pax Number on Bus')
+#     # # plt.title('Scatter Plot of Total Pax Number on Bus VS Time')
+#     # # plt.savefig('total_pax_num_on_bus_vs_time.png')
+#     # # plt.show()
+
+#     # # plt.scatter(env_now_list, total_pax_num_leave)
+#     # # plt.xlabel('Time (self.env.now)')
+#     # # plt.ylabel('Total Pax Number Leaving the System')
+#     # # plt.title('Scatter Plot of Total Pax Number Leaving VS Time')
+#     # # plt.savefig('total_pax_num_leave_vs_time.png')
+#     # # plt.show()
+
+
+#     # plt.scatter(env_now_list, total_pax_num_sys, label='Total Pax Number in the System',s=5)
+#     # plt.scatter(env_now_list, total_pax_num_on_bus, label='Total Pax Number on Bus',s=5)
+#     # plt.scatter(env_now_list, total_pax_num_leave, label='Total Pax Number Leaving the System',s=5)
+
+#     # plt.xlabel('Time (self.env.now)')
+#     # plt.ylabel('Total Pax Number')
+#     # plt.title('Scatter Plot of Total Pax Number VS Time')
+
+#     # plt.legend()
+
+#     # plt.savefig('combined_scatter_plot.png')
+#     # plt.show()
 
