@@ -15,7 +15,7 @@ FEATURE_DIM = 2
 CAPACITY = 60
 
 # planned headway
-HEADWAY = 6 * 60
+HEADWAY = 15 * 60 ### 
 
 # Threshold for low-level action
 THRESHOLD = 3 * 60
@@ -27,10 +27,10 @@ STATION_DIST = 1 # km
 MAX_WAITING_TIME = 30 * 60
 
 # number of stations
-N_STATION = 10
+N_STATION = 50
 
 # time HORIZON
-HORIZON = 6 * 60 * 60 # 3 hours
+HORIZON = 6 * 60 * 60 # 12 hours
 TRAVEL_TIME_STEP = 5 * 60 # travel times changes every 5 minutes
 
 # time for alight & board
