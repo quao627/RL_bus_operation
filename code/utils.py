@@ -6,7 +6,7 @@ seed=0
 np.random.seed(seed)
 
 # number of bus
-N_BUS = 7
+N_BUS = 100
 
 # feature dimension
 FEATURE_DIM = 2
@@ -15,7 +15,7 @@ FEATURE_DIM = 2
 CAPACITY = 60
 
 # planned headway
-HEADWAY = 15 * 60 ### 
+HEADWAY = 3 * 60
 
 # Threshold for low-level action
 THRESHOLD = 3 * 60
@@ -27,10 +27,10 @@ STATION_DIST = 1 # km
 MAX_WAITING_TIME = 30 * 60
 
 # number of stations
-N_STATION = 50
+N_STATION = 10
 
 # time HORIZON
-HORIZON = 6 * 60 * 60 # 12 hours
+HORIZON = 6 * 60 * 60 # 3 hours
 TRAVEL_TIME_STEP = 5 * 60 # travel times changes every 5 minutes
 
 # time for alight & board
@@ -85,27 +85,27 @@ def gen_travel_time_table(n_station, HORIZON, TRAVEL_TIME_STEP, sigma=20, seed=0
 # i -> for each station
 # j -> the number of passsengers
 # value -> the time step the passenger arrives at the station i (based on Poisson distribution)
-def gen_pax_arrive(n_station, HORIZON, n_passenger, PAX_ARRIVAL_RATE, seed=0):
-    n_station = int(n_station // 2)
-    def gen_table(seed):
-        np.random.seed(seed)
-        pax_arrive_table = np.zeros((n_station, int(n_passenger)))
-        for i in range(n_station):
-            arrival_time = 0
-            j = 0
-            while arrival_time < HORIZON:
-                arrival_time += np.random.exponential(1/PAX_ARRIVAL_RATE[i])
-                pax_arrive_table[i][j] = arrival_time
-                j += 1
-        pax_arrive_table[pax_arrive_table == 0] = np.inf
-        pax_arrive_table[-1, :] = np.inf
-        return pax_arrive_table
-    pax_arrive_table_1 = gen_table(123)
-    pax_arrive_table_2 = gen_table(42)[::-1, :][list(range(1, n_station)) + [0]]
-    pax_arrive_table = np.concatenate([pax_arrive_table_1, pax_arrive_table_2], axis=0)
-    for i in range(pax_arrive_table.shape[0]):
-        pax_arrive_table[i, :] = pax_arrive_table[i, :] + i * HEADWAY
-    return pax_arrive_table
+# def gen_pax_arrive(n_station, HORIZON, n_passenger, PAX_ARRIVAL_RATE, seed=0):
+#     n_station = int(n_station // 2)
+#     def gen_table(seed):
+#         np.random.seed(seed)
+#         pax_arrive_table = np.zeros((n_station, int(n_passenger)))
+#         for i in range(n_station):
+#             arrival_time = 0
+#             j = 0
+#             while arrival_time < HORIZON:
+#                 arrival_time += np.random.exponential(1/PAX_ARRIVAL_RATE[i])
+#                 pax_arrive_table[i][j] = arrival_time
+#                 j += 1
+#         pax_arrive_table[pax_arrive_table == 0] = np.inf
+#         pax_arrive_table[-1, :] = np.inf
+#         return pax_arrive_table
+#     pax_arrive_table_1 = gen_table(123)
+#     pax_arrive_table_2 = gen_table(42)[::-1, :][list(range(1, n_station)) + [0]]
+#     pax_arrive_table = np.concatenate([pax_arrive_table_1, pax_arrive_table_2], axis=0)
+#     for i in range(pax_arrive_table.shape[0]):
+#         pax_arrive_table[i, :] = pax_arrive_table[i, :] + i * 6 * 60
+#     return pax_arrive_table
 
 # generating table for number of alighting passengers at each station at each time step
 # i -> for each station
@@ -150,7 +150,7 @@ PAX_ARRIVE_TABLE = np.tile(PAX_ARRIVE_TABLE, (2, 1))
 PAX_ARRIVE_TABLE[-1, :] = np.inf
 PAX_ARRIVE_TABLE[int(N_STATION // 2)-1, :] = np.inf
 for i in range(PAX_ARRIVE_TABLE.shape[0]):
-    PAX_ARRIVE_TABLE[i, :] = PAX_ARRIVE_TABLE[i, :] + i * HEADWAY
+    PAX_ARRIVE_TABLE[i, :] = PAX_ARRIVE_TABLE[i, :] + i * HEADWAY * 60
 
 # PAX_ALIGHT_TABLE = gen_pax_alight(N_STATION, HORIZON, 5000, PAX_ARRIVE_TABLE)
 def gen_pax_alight(pax_arrive_table):
