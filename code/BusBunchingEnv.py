@@ -539,13 +539,13 @@ class Env(gym.Env):
                 waiting_time += self.env.now - pax.last_time
                 #indiv_waiting_time_list.append(self.env.now - pax.last_time)
                 all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
-                # if self.env.now - pax.last_time >= 175: 
-                #     random_bit = random.choice([0, 1])
-                #     if random_bit == random.choice([0, 1])==1:
-                #         n_leave_pax+=1
-                #         pax.status=4 # leave
-                # else:
-                n_waiting_pax += 1
+                if self.env.now - pax.last_arrival_time >= 240: 
+                    random_bit = random.choice([0, 1])
+                    if random_bit == random.choice([0, 1])==1:
+                        n_leave_pax+=1
+                        pax.status=4 # leave
+                else:
+                    n_waiting_pax += 1
             elif pax.status == 1 and pax.last_time < self.env.now:
                 on_bus_time += self.env.now - pax.last_time
                 n_on_bus_pax += 1
@@ -562,9 +562,9 @@ class Env(gym.Env):
         total_pax_num_sys.append(len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 3 and pax.status != 4]))
         total_pax_num_on_bus.append(len([pax for pax in self.passengers if pax.status == 1]))
         total_pax_num_leave.append(len([pax for pax in self.passengers if pax.start_time < self.env.now  and pax.status == 4]))
-        print(total_pax_num_leave[-1])
+        #print(total_pax_num_leave[-1])
         global CNT
-        print('Count: ', CNT)
+        #print('Count: ', CNT)
         CNT += 1
         if CNT == 74:
             print('...')
@@ -632,6 +632,11 @@ if __name__ == '__main__':
     # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
     print(time.time())
     print('Total waiting time: ', env.acc_waiting_time)
+
+    print('N_BUS: ',N_BUS)
+    print('HEADWAY: ',HEADWAY)
+    print('N_STATION: ',N_STATION)
+    
     print('Avg passenger waiting time: ', np.mean(all_pax_waiting_times))
     print('Stdev passenger waiting time: ', np.std(all_pax_waiting_times))
 
@@ -686,14 +691,14 @@ if __name__ == '__main__':
     # plt.savefig('on_bus_time_histogram.png') 
     # plt.show()
 
-    # plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True, label='Histogram')
-    # sns.kdeplot(indiv_waiting_time_list, color='red',label='Kernel Density')
-    # plt.xlabel('Individual Waiting Time')
-    # plt.ylabel('Frequency')
-    # plt.legend()
-    # plt.title('Individual Waiting Time Histogram')
-    # plt.savefig('indiv_waiting_time_histogram.png') 
-    # plt.show()
+    plt.hist(all_pax_waiting_times, bins=10, edgecolor='black', density=True, label='Histogram')
+    sns.kdeplot(all_pax_waiting_times, color='red',label='Kernel Density')
+    plt.xlabel('Individual Waiting Time')
+    plt.ylabel('Frequency')
+    plt.legend()
+    plt.title('Individual Waiting Time Histogram')
+    plt.savefig('indiv_waiting_time_histogram.png') 
+    plt.show()
 
     # plt.scatter(env_now_list, total_pax_num_sys)
     # plt.xlabel('Time (self.env.now)')
@@ -717,16 +722,16 @@ if __name__ == '__main__':
     # plt.show()
 
 
-    # plt.scatter(env_now_list, total_pax_num_sys, label='Total Pax Number in the System',s=5)
-    # plt.scatter(env_now_list, total_pax_num_on_bus, label='Total Pax Number on Bus',s=5)
-    # plt.scatter(env_now_list, total_pax_num_leave, label='Total Pax Number Leaving the System',s=5)
+    plt.scatter(env_now_list, total_pax_num_sys, label='Total Pax Number in the System',s=5)
+    plt.scatter(env_now_list, total_pax_num_on_bus, label='Total Pax Number on Bus',s=5)
+    plt.scatter(env_now_list, total_pax_num_leave, label='Total Pax Number Leaving the System',s=5)
 
-    # plt.xlabel('Time (self.env.now)')
-    # plt.ylabel('Total Pax Number')
-    # plt.title('Scatter Plot of Total Pax Number VS Time')
+    plt.xlabel('Time (self.env.now)')
+    plt.ylabel('Total Pax Number')
+    plt.title('Scatter Plot of Total Pax Number VS Time')
 
-    # plt.legend()
+    plt.legend()
 
-    # plt.savefig('combined_scatter_plot.png')
-    # plt.show()
+    plt.savefig('combined_scatter_plot.png')
+    plt.show()
 
