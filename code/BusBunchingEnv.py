@@ -439,7 +439,35 @@ class Env(gym.Env):
                 station.set_last(self.stations[index-1])
 
             station.set_opposite(self.stations[len(self.stations) - index - 1])
+    
+    # historic LSTM
+    def make_prediction(self):
+        # Get the latest data
+        latest_data = np.array(self.history[-2:])
 
+        # Normalize and reshape the data in the same way as the training data
+        history_array = np.array(self.history)
+        mins = history_array.min(axis=0)
+        maxs = history_array.max(axis=0)
+        latest_data_normalized = (latest_data - mins) / (maxs - mins)
+        latest_data_for_lstm = latest_data_normalized.reshape((1, latest_data_normalized.shape[0], latest_data_normalized.shape[1]))
+
+        # Define the LSTM model
+        model = Sequential()
+        model.add(LSTM(50, activation='relu', input_shape=(latest_data_for_lstm.shape[1], latest_data_for_lstm.shape[2])))
+        model.add(Dense(latest_data_for_lstm.shape[2]))
+
+        model.load_weights('lstm_model.h5')
+        # Use the LSTM model to make a prediction
+        prediction = model.predict(latest_data_for_lstm)
+
+        # Denormalize the prediction
+        prediction_denormalized = prediction * (maxs - mins) + mins
+        model.save_weights('lstm_model.h5')
+        
+        return prediction_denormalized
+
+    
     def step(self, action):
         if self.holding_only:
             action = (0, (action, 0))
@@ -618,6 +646,7 @@ class Passenger:
 
 
 if __name__ == '__main__':
+    # Why 
     env = Env(**{'holding_only': False, 'skipping_only': False, 'turning_only': False, 'mode': 'waiting_time_station'})
     env.reset()
     print(env.mode)
@@ -628,6 +657,12 @@ if __name__ == '__main__':
     while env.env.peek() < HORIZON - 15000:
         # TODO where is the training happening?
         obs, rew, done, info = env.step(action)
+        future_conditions = env.make_prediction()
+        # Repeat future_conditions for each observation
+        future_conditions_resized = np.repeat(future_conditions, obs.shape[0], axis=0)
+        # Concatenate obs and future_conditions_resized
+        obs = np.concatenate([obs, future_conditions_resized], axis=1)
+        
         total_reward += rew
         cnt += 1
         # if r < 0.1 and env.allow_skipping:
