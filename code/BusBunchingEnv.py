@@ -63,7 +63,6 @@ class Bus:
         self.taking_action = False
         self.last_departure_time = starting_time
         self.action_start_time = None
-        
         # Adding things to initialize history data
         self.history = []
 
@@ -303,6 +302,7 @@ class Station:
         self.passengers = self.generate_pax(self.pax_alight, self.pax_board)
         self.env.passengers.extend(self.passengers)
         self.last_arrival_time = 0
+        
 
     def set_last(self, station):
         self.last_station = station
@@ -376,6 +376,7 @@ class Env(gym.Env):
         self.holding_only = holding_only
         self.skipping_only = skipping_only
         self.turning_only = turning_only
+        self.history = []
 
         # run simulation until the first event
         while not self.ready:
@@ -464,10 +465,9 @@ class Env(gym.Env):
         done = self.env.peek() >= HORIZON - 2000
         info = {'timestep': float(timestep)}
         # TODO: what if I want to add a time here?
-        # for bus in self.buses:
-        #     current_time = self.time
-        #     num_passengers = [station.num_pax for station in self.stations]
-        #     self.history.append((current_time, num_passengers))
+        current_time = self.env.now
+        num_passengers = len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 3 and pax.status != 4])
+        self.history.append((current_time, num_passengers))
         
         return obs, float(rewards), bool(done), info
 
