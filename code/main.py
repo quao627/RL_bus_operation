@@ -15,6 +15,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from HybridPPO.hybridppo import HybridPPO
+from sb3_contrib import RecurrentPPO
 
 # from HybridPPO.hybridppo import *
 from BusBunchingEnv import Env

@@ -6,7 +6,7 @@ seed=0
 np.random.seed(seed)
 
 # number of bus
-N_BUS = 7
+N_BUS = 14
 
 # feature dimension
 FEATURE_DIM = 2
@@ -15,7 +15,7 @@ FEATURE_DIM = 2
 CAPACITY = 60
 
 # planned headway
-HEADWAY = 2 * 60
+HEADWAY = 6 * 60
 
 # Threshold for low-level action
 THRESHOLD = 3 * 60
