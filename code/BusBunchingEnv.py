@@ -440,7 +440,7 @@ class Env(gym.Env):
 
             station.set_opposite(self.stations[len(self.stations) - index - 1])
     
-    # historic LSTM
+    # historic LSTM for prediction
     def make_prediction(self):
         # Get the latest data
         latest_data = np.array(self.history[-2:])
@@ -457,7 +457,6 @@ class Env(gym.Env):
         model.add(LSTM(50, activation='relu', input_shape=(latest_data_for_lstm.shape[1], latest_data_for_lstm.shape[2])))
         model.add(Dense(latest_data_for_lstm.shape[2]))
 
-        model.load_weights('lstm_model.h5')
         # Use the LSTM model to make a prediction
         prediction = model.predict(latest_data_for_lstm)
 
@@ -492,10 +491,11 @@ class Env(gym.Env):
         rewards = self.get_reward(obs=obs[:, 2].flatten())
         done = self.env.peek() >= HORIZON - 2000
         info = {'timestep': float(timestep)}
-        # TODO: what if I want to add a time here?
+        # adding history for LSTM 
         current_time = self.env.now
         num_passengers = len([pax for pax in self.passengers if pax.start_time < self.env.now and pax.status != 3 and pax.status != 4])
         self.history.append((current_time, num_passengers))
+        # print(self.history)
         
         return obs, float(rewards), bool(done), info
 
@@ -646,7 +646,7 @@ class Passenger:
 
 
 if __name__ == '__main__':
-    # Why 
+    # TODO: Why?
     env = Env(**{'holding_only': False, 'skipping_only': False, 'turning_only': False, 'mode': 'waiting_time_station'})
     env.reset()
     print(env.mode)
@@ -655,13 +655,22 @@ if __name__ == '__main__':
     cnt = 0
     print(time.time())
     while env.env.peek() < HORIZON - 15000:
-        # TODO where is the training happening?
+        
         obs, rew, done, info = env.step(action)
         future_conditions = env.make_prediction()
         # Repeat future_conditions for each observation
         future_conditions_resized = np.repeat(future_conditions, obs.shape[0], axis=0)
+        
         # Concatenate obs and future_conditions_resized
+        # TODO am I concatenating the right way? where is the obs used?
         obs = np.concatenate([obs, future_conditions_resized], axis=1)
+        # obs shape (18, 8)
+        # for bus
+        # return {'location': location,
+        # 'pax': self.num_pax,
+        # 'h_action': self.h_action if self.taking_action else None,
+        # 'l_action': self.l_action if self.taking_action else None,
+        # 'action_duration': action_duration,}
         
         total_reward += rew
         cnt += 1
