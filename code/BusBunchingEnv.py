@@ -5,6 +5,9 @@ import json
 import time
 import random
 from itertools import chain
+import numpy as np
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
 
 import gym
 from gym.spaces import Box, Discrete, Tuple
@@ -60,6 +63,9 @@ class Bus:
         self.taking_action = False
         self.last_departure_time = starting_time
         self.action_start_time = None
+        
+        # Adding things to initialize history data
+        self.history = []
 
 
     def drive(self):
@@ -457,6 +463,11 @@ class Env(gym.Env):
         rewards = self.get_reward(obs=obs[:, 2].flatten())
         done = self.env.peek() >= HORIZON - 2000
         info = {'timestep': float(timestep)}
+        # TODO: what if I want to add a time here?
+        # for bus in self.buses:
+        #     current_time = self.time
+        #     num_passengers = [station.num_pax for station in self.stations]
+        #     self.history.append((current_time, num_passengers))
         
         return obs, float(rewards), bool(done), info
 
@@ -615,6 +626,7 @@ if __name__ == '__main__':
     cnt = 0
     print(time.time())
     while env.env.peek() < HORIZON - 15000:
+        # TODO where is the training happening?
         obs, rew, done, info = env.step(action)
         total_reward += rew
         cnt += 1
@@ -630,6 +642,7 @@ if __name__ == '__main__':
         # print(f'Current time: {env.env.now}')
     # pickle.dump(env.data, open('data.pkl', 'wb'))
     # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
+    # Once you have collected enough data in `env.history`, you can preprocess it and train your LSTM model
     print(time.time())
     print('Total waiting time: ', env.acc_waiting_time)
 
