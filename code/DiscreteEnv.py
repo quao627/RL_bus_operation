@@ -5,7 +5,12 @@ import json
 import time
 import random
 from itertools import chain
-
+from stable_baselines3 import PPO, DQN
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.evaluation import evaluate_policy
+from HybridPPO.hybridppo import HybridPPO
+from sb3_contrib import RecurrentPPO
 import gym
 from gym.spaces import Box, Discrete, Tuple
 from gym.utils import seeding
@@ -524,7 +529,7 @@ class Env(gym.Env):
                 waiting_time += self.env.now - pax.last_time
                 #indiv_waiting_time_list.append(self.env.now - pax.last_time)
                 all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
-                if self.env.now - pax.last_arrival_time >= 240: 
+                if self.env.now - pax.last_arrival_time >= 0.8*HEADWAY: 
                     random_bit = random.choice([0, 1])
                     if random_bit == random.choice([0, 1])==1:
                         n_leave_pax+=1
@@ -592,9 +597,18 @@ if __name__ == '__main__':
     total_reward = 0
     cnt = 0
     print(time.time())
+
+    model = RecurrentPPO.load("ppo_recurrent")
+    obs = env.reset()
+    lstm_states = None
+    num_envs = 1
+    episode_starts = np.ones((num_envs,), dtype=bool)
+
     while env.env.peek() < HORIZON - 15000:
         # action = random.randint(0, 1)
+        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         obs, rew, done, info = env.step(action)
+        episode_starts = done
         total_reward += rew
         cnt += 1
         # if r < 0.1 and env.allow_skipping:

@@ -37,16 +37,20 @@ def train(args):
     if not os.path.exists(logdir):
         os.makedirs(logdir)
 
-    model = PPO("MlpPolicy", 
+    model = RecurrentPPO("MlpLstmPolicy", 
                     env, 
                     verbose=1, 
                     batch_size=args.batch_size, 
                     tensorboard_log=logdir,
                     learning_rate=args.learning_rate,
-                    gamma=args.gamma,)
+                    gamma=args.gamma,
+                    n_steps=128,
+                    n_epochs=10,
+                    )
 
-    model.learn(total_timesteps=args.num_steps, tb_log_name="ppo")
-    model.save(model_dir)
+    model.learn(total_timesteps=args.num_steps, tb_log_name="ppo_lstm")
+    #model.save(model_dir)
+    model.save("ppo_recurrent")
 
     return model
 
