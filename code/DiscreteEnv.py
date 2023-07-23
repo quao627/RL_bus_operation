@@ -389,14 +389,15 @@ class Env(gym.Env):
         self.arange_stations()
         self.buses = [Bus(self, self.env, i, BUS_SCHEDULE[i]) for i in range(N_BUS)]
         self.ready = False
-        self.action = (0, (0, 0))
+        #self.action = (0, (0, 0))
+        self.action = 0
         self.departure_times = []
         self.data = {station_idx: [] for station_idx in range(N_STATION)}
 
 
         self.acc_waiting_time = 0
         self.acc_on_bus_time = 0
-
+        
         # run simulation until the first event
         while not self.ready:
         # while self.env.now < 3600:
@@ -426,15 +427,22 @@ class Env(gym.Env):
             station.set_opposite(self.stations[len(self.stations) - index - 1])
 
     def step(self, action):
-        if self.holding_only:
-            action = (0, (action, 0))
-        elif self.skipping_only:
-            action = (action, (0, 0))
+        # if self.holding_only:
+        #     #action = (0, (action, 0))
+        #     action = action
+        if self.skipping_only:
+            # action = (action, (0, 0))## 12
+            action = SKIPPING_ACTION
+        # elif self.turning_only:
+        #     if action:
+        #         action = (2, (0, 0))
+        #     else:
+        #         action = (0, (0, 0))
         elif self.turning_only:
-            if action:
-                action = (2, (0, 0))
+            if action < SKIPPING_ACTION:
+                action = TURNING_AROUND_ACTION
             else:
-                action = (0, (0, 0))
+                action = 0
         self.action = action
         while not self.ready:
             self.env.step()
@@ -472,7 +480,7 @@ class Env(gym.Env):
             out[k] = processed_ob
             if ob['ego'] == 1:
                 index = k
-        print('index: ', index)
+        # print('index: ', index)
         out = np.roll(out, -index, axis=0)
         # out = np.array([out[-1], out[0]])
         return out
@@ -500,8 +508,8 @@ class Env(gym.Env):
         for bus in self.buses:
             ob = bus.get_observation()
             if bus.idx == self.acting_bus:
-                print(self.acting_bus)
-                print(bus.idx)
+                # print(self.acting_bus)
+                # print(bus.idx)
                 ob['ego'] = 1
             else:
                 ob['ego'] = 0
@@ -598,7 +606,7 @@ if __name__ == '__main__':
     cnt = 0
     print(time.time())
 
-    model = RecurrentPPO.load("ppo_recurrent")
+    # model = RecurrentPPO.load("ppo_recurrent")
     obs = env.reset()
     lstm_states = None
     num_envs = 1
@@ -606,7 +614,7 @@ if __name__ == '__main__':
 
     while env.env.peek() < HORIZON - 15000:
         # action = random.randint(0, 1)
-        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
+        # action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         obs, rew, done, info = env.step(action)
         episode_starts = done
         total_reward += rew

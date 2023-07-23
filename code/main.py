@@ -18,8 +18,8 @@ from HybridPPO.hybridppo import HybridPPO
 from sb3_contrib import RecurrentPPO
 
 # from HybridPPO.hybridppo import *
-from BusBunchingEnv import Env
-
+from DiscreteEnv import Env
+# from BusBunchingEnv import Env
 
 def train(args):
 
@@ -47,6 +47,7 @@ def train(args):
                     n_steps=128,
                     n_epochs=10,
                     )
+    
 
     model.learn(total_timesteps=args.num_steps, tb_log_name="ppo_lstm")
     #model.save(model_dir)

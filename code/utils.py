@@ -41,8 +41,14 @@ t_b = 3   # time for boarding
 AVG_PAX_ARRIVAL_RATE = 30 # p (sec/pax)
 STD_PAX_ARRIVAL_RATE = 10
 
+demand_levels = np.array([0.5, 0.75, 1.0])
+np.random.seed(seed)
+random_demand_levels = np.random.choice(demand_levels, int(N_STATION // 2), replace=True)
+random_demand_levels += np.random.normal(0, STD_PAX_ARRIVAL_RATE, int(N_STATION // 2)) # Gaussian noise
+random_demand_levels = np.clip(random_demand_levels, min(demand_levels), max(demand_levels)) # demand level still within the valid range
 
-PAX_ARRIVAL_RATE = [(np.exp(-0.5*((i-int(N_STATION // 2)*0.5)/STD_PAX_ARRIVAL_RATE)**2)* 1/ AVG_PAX_ARRIVAL_RATE) for i in range(int(N_STATION // 2))] # lambda pax/sec
+PAX_ARRIVAL_RATE = [level / AVG_PAX_ARRIVAL_RATE for level in random_demand_levels]
+# PAX_ARRIVAL_RATE = [(np.exp(-0.5*((i-int(N_STATION // 2)*0.5)/STD_PAX_ARRIVAL_RATE)**2)* 1/ AVG_PAX_ARRIVAL_RATE) for i in range(int(N_STATION // 2))] # lambda pax/sec
 # PAX_ARRIVAL_RATE = [1/AVG_PAX_ARRIVAL_RATE] * N_STATION # lambda pax/sec
 
 PAX_AVG_INVEH_TIME = 5 * 60 # 5 minutes
