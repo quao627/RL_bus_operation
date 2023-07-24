@@ -41,6 +41,9 @@ t_b = 3   # time for boarding
 AVG_PAX_ARRIVAL_RATE = 30 # p (sec/pax)
 STD_PAX_ARRIVAL_RATE = 10
 
+MIN_DELAY=0
+MAX_DELAY=20
+
 demand_levels = np.array([0.5, 0.75, 1.0])
 np.random.seed(seed)
 random_demand_levels = np.random.choice(demand_levels, int(N_STATION // 2), replace=True)
@@ -136,7 +139,8 @@ def gen_bus_schedule(n_bus, HORIZON, seed=0):
     bus_schedule.append(HEADWAY)
     departure_time = HEADWAY
     while True:
-        departure_time += HEADWAY
+        random_delay = np.random.uniform(MIN_DELAY, MAX_DELAY)
+        departure_time += HEADWAY + random_delay
         if departure_time > HORIZON:
             break
         bus_schedule.append(departure_time)
