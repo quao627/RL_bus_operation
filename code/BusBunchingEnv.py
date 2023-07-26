@@ -584,8 +584,6 @@ if __name__ == '__main__':
     def progress_criteria(avg_reward):
         return avg_reward >= TARGET_AVG_REWARD
 
-
-
     # Initialize environment
     env = Env(**{'holding_only': False, 'skipping_only': True, 'turning_only': False, 'mode': 'waiting_time_station'})
     # Initialize agent
