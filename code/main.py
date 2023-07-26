@@ -5,6 +5,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import sys
+import numpy as np
 sys.path.append('HybridPPO')
 
 
@@ -20,40 +21,66 @@ from sb3_contrib import RecurrentPPO
 # from HybridPPO.hybridppo import *
 from DiscreteEnv import Env
 # from BusBunchingEnv import Env
+class CurriculumCallback(BaseCallback):
+    def __init__(self, check_freq: int, difficulty_increase_thresh: float, verbose=1):
+        super(CurriculumCallback, self).__init__(verbose)
+        self.check_freq = check_freq
+        self.difficulty_increase_thresh = difficulty_increase_thresh
+        self.best_mean_reward = -np.inf
+
+    def _on_step(self) -> bool:
+        if self.n_calls % self.check_freq == 0:
+            # Evaluate policy training performance
+            mean_reward, std_reward = evaluate_policy(self.model, self.training_env, n_eval_episodes=10)
+            if self.verbose > 0:
+                print(f"N timesteps: {self.num_timesteps} mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+
+            # Increase difficulty if performance threshold is exceeded
+            if mean_reward > self.best_mean_reward + self.difficulty_increase_thresh:
+                self.best_mean_reward = mean_reward
+                self.training_env.envs[0].increase_difficulty()
+
+        return True
+
 
 def train(args):
-
+    
     assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
 
-    config = {'holding_only': args.holding_only,
-                'skipping_only': args.skipping_only, 
-                'turning_only': args.turning_only,
-                'mode': args.mode}
-    env = Env(**config)
+    for difficulty_level in range(1, 5):  # Modify this to suit the number of difficulty levels in your curriculum
+        print(f"Training on difficulty level {difficulty_level}")
 
-    model_dir = args.model_dir + args.mode
-    logdir = args.log_dir
+        config = {'holding_only': args.holding_only,
+                    'skipping_only': args.skipping_only, 
+                    'turning_only': args.turning_only,
+                    'mode': args.mode,
+                    'difficulty_level': difficulty_level}  
+        env = Env(**config)
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+        model_dir = args.model_dir + args.mode
+        logdir = args.log_dir
 
-    model = RecurrentPPO("MlpLstmPolicy", 
-                    env, 
-                    verbose=1, 
-                    batch_size=args.batch_size, 
-                    tensorboard_log=logdir,
-                    learning_rate=args.learning_rate,
-                    gamma=args.gamma,
-                    n_steps=128,
-                    n_epochs=10,
-                    )
-    
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
 
-    model.learn(total_timesteps=args.num_steps, tb_log_name="ppo_lstm")
-    #model.save(model_dir)
-    model.save("ppo_recurrent")
+        model = RecurrentPPO("MlpLstmPolicy", 
+                        env, 
+                        verbose=1, 
+                        batch_size=args.batch_size, 
+                        tensorboard_log=logdir,
+                        learning_rate=args.learning_rate,
+                        gamma=args.gamma,
+                        n_steps=128,
+                        n_epochs=10,
+                        )
+        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
+
+        model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
+
+        model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
 
     return model
+
 
 
 if __name__ == '__main__':
