@@ -11,6 +11,20 @@ from gym.spaces import Box, Discrete, Tuple
 from gym.utils import seeding
 import simpy
 from simpy.events import AnyOf, AllOf, Event
+from typing import List, Dict, Union
+from dataclasses import dataclass
+import pickle
+import json
+import time
+import random
+from itertools import chain
+
+import gym
+from gym.spaces import Box, Discrete, Tuple
+from gym.utils import seeding
+import simpy
+from simpy.events import AnyOf, AllOf, Event
+import numpy as np
 
 from utils import *
 
@@ -32,6 +46,13 @@ Todos (Simulator):
 Todos (RL):
 
 '''
+
+class RandomAgent:
+    def __init__(self, action_space):
+        self.action_space = action_space
+
+    def action(self, obs):
+        return self.action_space.sample()
 
 
 pax_data = {bus_id : [] for bus_id in range(N_BUS)}
@@ -559,33 +580,96 @@ class Passenger:
 
 
 if __name__ == '__main__':
+    TARGET_AVG_REWARD = -1.04
+    def progress_criteria(avg_reward):
+        return avg_reward >= TARGET_AVG_REWARD
+
+
+
+    # Initialize environment
     env = Env(**{'holding_only': False, 'skipping_only': True, 'turning_only': False, 'mode': 'waiting_time_station'})
-    env.reset()
-    print(env.mode)
-    action = (0, (0, 0))
-    total_reward = 0
-    cnt = 0
-    print(time.time())
-    while env.env.peek() < HORIZON - 2000:
-        action = random.randint(0, 1)
-        obs, rew, done, info = env.step(action)
-        total_reward += rew
-        cnt += 1
-        # if r < 0.1 and env.allow_skipping:
-        #     action = (1, 0)
-        # elif r < 0.2:
-        #     action = (2, 1)
-        # else:
-        #     action = policy(obs)
-        # action = env.action_space.sample()   
-        # action = (1, (0, 0)) if env.allow_skipping else (0, (0, 0))
-        # action = (0, (0, 0))
-        # print(f'Current time: {env.env.now}')
-    # pickle.dump(env.data, open('data.pkl', 'wb'))
-    # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
+    # Initialize agent
+    agent = RandomAgent(env.action_space)
+
+    # Number of episodes
+    n_episodes = 10
+    # Initialize dictionary to store total rewards for each level
+    rewards_dict = {i: [] for i in range(n_episodes)}
+
+    # Loop over episodes
+    for i_episode in range(n_episodes):
+
+        # Reset state
+        observation = env.reset()
+
+        # One episode loop
+        for t in range(1000):
+            # Agent makes action
+            action = agent.action(observation)
+            # Apply action to the environment
+            observation, reward, done, info = env.step(action)
+
+            # If the episode is done, reset the environment
+            if done:
+                print(f"Episode finished after {t+1} timesteps")
+                break
+        obs = env.reset()
+        action = 0  # Initialize action
+        while env.env.peek() < HORIZON - 15000:
+            obs, reward, done, info = env.step(action)  # Execute action
+            rewards_dict[i].append(reward)  # Store reward
+            # Progress criteria check and level up if criteria met
+            if len(rewards_dict[i]) >= 100 and progress_criteria(sum(rewards_dict[i][-100:]) / 100):
+                print(f"Progress criteria met at level {i+1}, moving to next level.")
+                break  # Progress to the next difficulty level
+            # if done:
+            #     print(f"Failed to meet progress criteria at level {i+1}, repeating level.")
+            #     obs = env.reset()  # Reset environment for the same level
+            #     rewards_dict[i] = []  # Clear rewards for the current level
+
+    # Initialize figure for plotting
+    plt.figure(figsize=(10, 6))
+
+    # Plot the rewards progress for each level
+    for i, level in enumerate(n_episodes):
+        plt.plot(rewards_dict[i], label=f"Level {i+1}: {level}")
+
+    # Add title, labels, and legend to the plot
+    plt.title("Rewards Progress for Each Level")
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.legend()
+
+    # Display the plot
+    plt.show()
+                
+    # env = Env(**{'holding_only': False, 'skipping_only': True, 'turning_only': False, 'mode': 'waiting_time_station'})
+    # env.reset()
+    # print(env.mode)
+    # action = (0, (0, 0))
+    # total_reward = 0
+    # cnt = 0
+    # print(time.time())
+    # while env.env.peek() < HORIZON - 2000:
+    #     action = random.randint(0, 1)
+    #     obs, rew, done, info = env.step(action)
+    #     total_reward += rew
+    #     cnt += 1
+    #     # if r < 0.1 and env.allow_skipping:
+    #     #     action = (1, 0)
+    #     # elif r < 0.2:
+    #     #     action = (2, 1)
+    #     # else:
+    #     #     action = policy(obs)
+    #     # action = env.action_space.sample()   
+    #     # action = (1, (0, 0)) if env.allow_skipping else (0, (0, 0))
+    #     # action = (0, (0, 0))
+    #     # print(f'Current time: {env.env.now}')
+    # # pickle.dump(env.data, open('data.pkl', 'wb'))
+    # # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
     print(time.time())
     print('Total waiting time: ', env.acc_waiting_time)
     print('Total on bus time: ', env.acc_on_bus_time)
     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
-    print('Total reward: ', total_reward)
-    print('Cnt: ', cnt)
+    # print('Total reward: ', total_reward)
+    # print('Cnt: ', cnt)
