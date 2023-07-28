@@ -17,7 +17,7 @@ from gym.utils import seeding
 import simpy
 from simpy.events import AnyOf, AllOf, Event
 
-from utils import *
+from utils_DR import *
 
 num_skipping_stop = 0
 num_total_stop = 0
