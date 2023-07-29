@@ -345,7 +345,7 @@ all_pax_waiting_times = []
 
 
 class Env(gym.Env):
-    def __init__(self, holding_only=True, skipping_only=False, turning_only=False, mode='headway', difficulty_level=1) -> None:
+    def __init__(self, holding_only=False, skipping_only=False, turning_only=False, mode='headway', difficulty_level=1) -> None:
         self.travel_times = TABLE_TRAVEL_TIME
         self.pax_alight = PAX_ALIGHT_TABLE
         self.pax_board = PAX_ARRIVE_TABLE

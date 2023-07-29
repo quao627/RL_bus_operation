@@ -93,7 +93,7 @@ if __name__ == '__main__':
     parser.add_argument("--turning_only", action="store_true", default=False, help="only turning")
     parser.add_argument("--model_dir", type=str, default="models/PPO", help="model directory")
     parser.add_argument("--log_dir", type=str, default="logs", help="log directory")
-    parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
+    parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate")
     parser.add_argument("--batch_size", type=int, default=128, help="batch size")
     parser.add_argument("--num_steps", type=int, default=300000, help="number of steps")
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
