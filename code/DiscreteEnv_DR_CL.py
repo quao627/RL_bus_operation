@@ -183,7 +183,7 @@ class Bus:
                 pax.bus = None
                 passengers_left.append(pax)
                 pax.new_status = 2
-                pax.last_arrival_time = self.simpy_env.now()
+                pax.last_arrival_time = self.simpy_env.now
             else:
                 pax.new_status = 3
         num_pax = len(self.passengers)
