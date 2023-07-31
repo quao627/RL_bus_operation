@@ -339,7 +339,7 @@ on_bus_time_list=[]
 indiv_waiting_time_list=[]
 env_now_list=[]
 status_list=[]
-h_action_list=[]
+action_list=[]
 all_pax_waiting_times = []
 
 
@@ -399,8 +399,12 @@ class Env(gym.Env):
         self.difficulty_level += 1
     
     def adjust_for_difficulty(self):
-        self.num_stations = self.difficulty_level * 5
-        self.num_buses = self.difficulty_level * 2
+        # self.num_stations = self.difficulty_level * 5
+        # self.num_buses = self.difficulty_level * 2
+        N_STATION = self.difficulty_level * 5
+        N_BUS = self.difficulty_level * 7
+        HEADWAY = self.difficulty_level * 180
+
 
     def reset(self):
         self.env = simpy.Environment()
@@ -469,6 +473,7 @@ class Env(gym.Env):
             else:
                 action = 0
         self.action = action
+        action_list.append(action)
         while not self.ready:
             self.env.step()
             self.update_pax()
@@ -609,6 +614,10 @@ class Env(gym.Env):
 
 
 
+with open('pax_data_DR_CL2.pkl', 'wb') as f:
+    pickle.dump(pax_data, f)
+with open('action_list_DR_CL.pkl', 'wb') as f:
+    pickle.dump(action_list, f)
 
 @dataclass
 class Passenger:
@@ -705,8 +714,15 @@ if __name__ == '__main__':
     #     # action = (1, (0, 0)) if env.allow_skipping else (0, (0, 0))
     #     # action = (0, (0, 0))
     #     # print(f'Current time: {env.env.now}')
-    # # pickle.dump(env.data, open('data.pkl', 'wb'))
-    # # pickle.dump(pax_data, open('pax_data.pkl', 'wb'))
+    # print(env.data)
+    # pickle.dump(env.data, open('data.pkl', 'wb'))
+    # pickle.dump(pax_data, open('pax.pkl', 'wb'))
+    with open('data_DR_CL.pkl', 'wb') as f:
+        pickle.dump(env.data, f)
+    with open('pax_data_DR_CL.pkl', 'wb') as f:
+        pickle.dump(pax_data, f)
+    with open('action.pkl', 'wb') as f:
+        pickle.dump(action_list, f)
     print(time.time())
     print('Total waiting time: ', env.acc_waiting_time)
     print('Total on bus time: ', env.acc_on_bus_time)

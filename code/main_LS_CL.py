@@ -2,6 +2,7 @@ import time
 import os
 import argparse
 import warnings
+import pickle
 warnings.filterwarnings("ignore")
 
 import sys
@@ -21,6 +22,8 @@ from sb3_contrib import RecurrentPPO
 # from HybridPPO.hybridppo import *
 from DiscreteEnv_DR_CL import Env
 # from BusBunchingEnv import Env
+action_list=[]
+
 class CurriculumCallback(BaseCallback):
     def __init__(self, check_freq: int, difficulty_increase_thresh: float, verbose=1):
         super(CurriculumCallback, self).__init__(verbose)
@@ -47,7 +50,7 @@ def train(args):
     
     assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
 
-    for difficulty_level in range(1, 5):  # Modify this to suit the number of difficulty levels in your curriculum
+    for difficulty_level in range(1, 3):  # Modify this to suit the number of difficulty levels in your curriculum
         print(f"Training on difficulty level {difficulty_level}")
 
         config = {'holding_only': args.holding_only,
@@ -80,6 +83,11 @@ def train(args):
 
 
         model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
+    print("....")
+    with open('data_DR_CL.pkl', 'wb') as f:
+        pickle.dump(env.data, f)
+    with open('action_list_DR_CL.pkl', 'wb') as f:
+        pickle.dump(action_list, f)
 
     return model
 
@@ -95,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument("--turning_only", action="store_true", default=False, help="only turning")
     parser.add_argument("--model_dir", type=str, default="models/PPO", help="model directory")
     parser.add_argument("--log_dir", type=str, default="logs", help="log directory")
-    parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate")
+    parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
     parser.add_argument("--batch_size", type=int, default=128, help="batch size")
     parser.add_argument("--num_steps", type=int, default=300000, help="number of steps")
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
@@ -103,6 +111,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     train(args)
+
+
 
     # env = gym.make('Moving-v0')
     # if recording
