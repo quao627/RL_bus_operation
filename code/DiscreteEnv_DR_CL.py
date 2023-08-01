@@ -79,7 +79,8 @@ class Bus:
         yield self.simpy_env.timeout(self.starting_time)
         self.env.data[self.cur_station.idx].append(self.simpy_env.now)
         pax_data[self.idx].append(self.num_pax)
-        
+        with open('env_data5.pkl', 'wb') as f:
+            pickle.dump(self.env.data, f)
 
         # each cycle is a trip from one station to the next
         while True:
@@ -376,6 +377,7 @@ class Env(gym.Env):
         self.last_difficulty_increase = 0
         self.adjust_for_difficulty()
 
+        self.action_list = []
 
         # run simulation until the first event
         while not self.ready:
@@ -473,7 +475,9 @@ class Env(gym.Env):
             else:
                 action = 0
         self.action = action
-        action_list.append(action)
+        self.action_list.append(self.action)
+        with open('action_list5.pkl', 'wb') as f:
+            pickle.dump(self.action_list, f)
         while not self.ready:
             self.env.step()
             self.update_pax()

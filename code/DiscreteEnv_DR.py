@@ -73,6 +73,8 @@ class Bus:
         yield self.simpy_env.timeout(self.starting_time)
         self.env.data[self.cur_station.idx].append(self.simpy_env.now)
         pax_data[self.idx].append(self.num_pax)
+        with open('env_data2.pkl', 'wb') as f:
+            pickle.dump(self.env.data, f)
         
 
         # each cycle is a trip from one station to the next
@@ -177,7 +179,7 @@ class Bus:
                 pax.bus = None
                 passengers_left.append(pax)
                 pax.new_status = 2
-                pax.last_arrival_time = self.simpy_env.now()
+                pax.last_arrival_time = self.simpy_env.now
             else:
                 pax.new_status = 3
         num_pax = len(self.passengers)
@@ -364,6 +366,7 @@ class Env(gym.Env):
         self.holding_only = holding_only
         self.skipping_only = skipping_only
         self.turning_only = turning_only
+        self.action_list = []
 
         # run simulation until the first event
         while not self.ready:
@@ -444,6 +447,9 @@ class Env(gym.Env):
             else:
                 action = 0
         self.action = action
+        self.action_list.append(self.action)
+        with open('action_list2.pkl', 'wb') as f:
+            pickle.dump(self.action_list, f)
         while not self.ready:
             self.env.step()
             self.update_pax()
