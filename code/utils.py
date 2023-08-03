@@ -14,8 +14,6 @@ FEATURE_DIM = 2
 # capacity of bus
 CAPACITY = 60
 
-# planned headway
-HEADWAY = 6 * 60
 
 # Threshold for low-level action
 THRESHOLD = 3 * 60
@@ -28,6 +26,10 @@ MAX_WAITING_TIME = 30 * 60
 
 # number of stations
 N_STATION = 10
+
+# planned headway
+#HEADWAY = (260 * N_STATION - 240) / N_BUS
+HEADWAY = (200 * N_STATION - 180) / N_BUS
 
 # time HORIZON
 HORIZON = 6 * 60 * 60 # 3 hours

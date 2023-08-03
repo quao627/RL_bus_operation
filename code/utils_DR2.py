@@ -6,7 +6,7 @@ seed=0
 np.random.seed(seed)
 
 # number of bus
-N_BUS = 14
+N_BUS = 20
 
 # feature dimension
 FEATURE_DIM = 2

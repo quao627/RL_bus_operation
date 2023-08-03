@@ -2,6 +2,7 @@ import time
 import os
 import argparse
 import warnings
+import numpy as np
 warnings.filterwarnings("ignore")
 
 import sys
@@ -20,6 +21,7 @@ from sb3_contrib import RecurrentPPO
 # from HybridPPO.hybridppo import *
 from DiscreteEnv_DR import Env
 # from BusBunchingEnv import Env
+
 
 def train(args):
 
@@ -53,7 +55,7 @@ def train(args):
     #model.save(model_dir)
     model.save("ppo_recurrent")
 
-    return model
+    return model, env
 
 
 if __name__ == '__main__':
@@ -68,12 +70,18 @@ if __name__ == '__main__':
     parser.add_argument("--log_dir", type=str, default="logs", help="log directory")
     parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
     parser.add_argument("--batch_size", type=int, default=128, help="batch size")
-    parser.add_argument("--num_steps", type=int, default=300000, help="number of steps")
+    parser.add_argument("--num_steps", type=int, default=300000, help="number of steps") # 300000
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
 
     args = parser.parse_args()
 
-    train(args)
+    model, env = train(args)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
+
+    print("mean_reward: ",mean_reward )
+    print("std_reward: ", std_reward)
+    print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
+    print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
 
     # env = gym.make('Moving-v0')
     # if recording

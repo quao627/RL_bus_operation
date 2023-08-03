@@ -73,7 +73,7 @@ class Bus:
         yield self.simpy_env.timeout(self.starting_time)
         self.env.data[self.cur_station.idx].append(self.simpy_env.now)
         pax_data[self.idx].append(self.num_pax)
-        with open('env_data2.pkl', 'wb') as f:
+        with open('env_data4.pkl', 'wb') as f:
             pickle.dump(self.env.data, f)
         
 
@@ -367,6 +367,7 @@ class Env(gym.Env):
         self.skipping_only = skipping_only
         self.turning_only = turning_only
         self.action_list = []
+        self.all_pax_waiting_times = []
 
         # run simulation until the first event
         while not self.ready:
@@ -448,8 +449,8 @@ class Env(gym.Env):
                 action = 0
         self.action = action
         self.action_list.append(self.action)
-        with open('action_list2.pkl', 'wb') as f:
-            pickle.dump(self.action_list, f)
+        # with open('action_list4.pkl', 'wb') as f:
+        #     pickle.dump(self.action_list, f)
         while not self.ready:
             self.env.step()
             self.update_pax()
@@ -536,13 +537,13 @@ class Env(gym.Env):
         n_leave_pax=0
         n_waiting_pax = 0
         n_on_bus_pax = 0
-        global all_pax_waiting_times
+        # global all_pax_waiting_times
         for pax in self.passengers:
             status_list.append(pax.status)
             if pax.status in [0, 2] and pax.last_time < self.env.now:
                 waiting_time += self.env.now - pax.last_time
-                #indiv_waiting_time_list.append(self.env.now - pax.last_time)
-                all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
+                # indiv_waiting_time_list.append(self.env.now - pax.last_time)
+                self.all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
                 if self.env.now - pax.last_arrival_time >= 0.8*HEADWAY: 
                     random_bit = random.choice([0, 1])
                     if random_bit == random.choice([0, 1])==1:
@@ -644,15 +645,15 @@ if __name__ == '__main__':
     print('HEADWAY: ',HEADWAY)
     print('N_STATION: ',N_STATION)
     
-    print('Avg passenger waiting time: ', np.mean(all_pax_waiting_times))
-    print('Stdev passenger waiting time: ', np.std(all_pax_waiting_times))
+    print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
+    print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
 
     print('Total on bus time: ', env.acc_on_bus_time)
     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
     print('Total reward: ', total_reward)
     print('Cnt: ', cnt)
 
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     # plt.hist(total_pax_num_sys, bins=10, edgecolor='black', density=True)
     # sns.kdeplot(total_pax_num_sys, color='red')
     # plt.xlabel('total_pax_num_sys')
@@ -693,31 +694,31 @@ if __name__ == '__main__':
     # # plt.savefig('plots/On_Bus_Time_Histogram.jpeg')
     # plt.show()
 
-    # plt.hist(indiv_waiting_time_list, bins=10, edgecolor='black', density=True)
-    # sns.kdeplot(indiv_waiting_time_list, color='red')
-    # plt.xlabel('Individual Waiting Time')
-    # plt.ylabel('Frequency')
-    # plt.title('Individual Waiting Time Histogram')
-    # # plt.savefig('plots/Individual_Waiting_Time_Histogram.jpeg')
-    # plt.show()
+    plt.hist(all_pax_waiting_times, bins=10, edgecolor='black', density=True)
+    sns.kdeplot(all_pax_waiting_times, color='red')
+    plt.xlabel('Individual Waiting Time')
+    plt.ylabel('Frequency')
+    plt.title('Individual Waiting Time Histogram')
+    plt.savefig('Individual_Waiting_Time_Histogram.jpeg')
+    plt.show()
 
-    # plt.scatter(env_now_list, total_pax_num_sys)
-    # plt.xlabel('Environment Now List')
-    # plt.ylabel('Total Pax Number System')
-    # plt.title('Scatter Plot System')
-    # # plt.savefig('plots/Scatter_Plot_System.jpeg')
-    # plt.show()
+    plt.scatter(env_now_list, total_pax_num_sys)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number System')
+    plt.title('Scatter Plot System')
+    plt.savefig('Scatter_Plot_System.jpeg')
+    plt.show()
 
-    # plt.scatter(env_now_list, total_pax_num_on_bus)
-    # plt.xlabel('Environment Now List')
-    # plt.ylabel('Total Pax Number On Bus')
-    # plt.title('Scatter Plot On Bus')
-    # # plt.savefig('plots/Scatter_Plot_On_Bus.jpeg')
-    # plt.show()
+    plt.scatter(env_now_list, total_pax_num_on_bus)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number On Bus')
+    plt.title('Scatter Plot On Bus')
+    plt.savefig('Scatter_Plot_On_Bus.jpeg')
+    plt.show()
 
-    # plt.scatter(env_now_list, total_pax_num_leave)
-    # plt.xlabel('Environment Now List')
-    # plt.ylabel('Total Pax Number Leave')
-    # plt.title('Scatter Plot Leave')
-    # # plt.savefig('plots/Scatter_Plot_Leave.jpeg')
-    # plt.show()
+    plt.scatter(env_now_list, total_pax_num_leave)
+    plt.xlabel('Environment Now List')
+    plt.ylabel('Total Pax Number Leave')
+    plt.title('Scatter Plot Leave')
+    plt.savefig('Scatter_Plot_Leave.jpeg')
+    plt.show()
