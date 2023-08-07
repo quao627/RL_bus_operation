@@ -16,6 +16,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from HybridPPO.hybridppo import HybridPPO
 from sb3_contrib import RecurrentPPO
+import numpy as np
 
 # from HybridPPO.hybridppo import *
 from DiscreteEnv import Env
@@ -48,7 +49,7 @@ def train(args):
     model.learn(total_timesteps=args.num_steps, tb_log_name="ppo")
     model.save(model_dir)
 
-    return model
+    return model, env
 
 
 if __name__ == '__main__':
@@ -68,7 +69,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    train(args)
+    model, env = train(args)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
+
+
+    print("mean_reward: ",mean_reward )
+    print("std_reward: ", std_reward)
+    print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
+    print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
+
 
     # env = gym.make('Moving-v0')
     # if recording

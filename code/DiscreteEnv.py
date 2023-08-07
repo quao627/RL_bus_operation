@@ -73,6 +73,9 @@ class Bus:
         yield self.simpy_env.timeout(self.starting_time)
         self.env.data[self.cur_station.idx].append(self.simpy_env.now)
         pax_data[self.idx].append(self.num_pax)
+        with open('env_data1.pkl', 'wb') as f:
+            pickle.dump(self.env.data, f)
+        
         
 
         # each cycle is a trip from one station to the next
@@ -177,7 +180,7 @@ class Bus:
                 pax.bus = None
                 passengers_left.append(pax)
                 pax.new_status = 2
-                pax.last_arrival_time = self.simpy_env.now()
+                pax.last_arrival_time = self.simpy_env.now
             else:
                 pax.new_status = 3
         num_pax = len(self.passengers)
@@ -364,6 +367,7 @@ class Env(gym.Env):
         self.holding_only = holding_only
         self.skipping_only = skipping_only
         self.turning_only = turning_only
+        self.all_pax_waiting_times = []
 
         # run simulation until the first event
         while not self.ready:
@@ -530,13 +534,13 @@ class Env(gym.Env):
         n_leave_pax=0
         n_waiting_pax = 0
         n_on_bus_pax = 0
-        global all_pax_waiting_times
+        # global all_pax_waiting_times
         for pax in self.passengers:
             status_list.append(pax.status)
             if pax.status in [0, 2] and pax.last_time < self.env.now:
                 waiting_time += self.env.now - pax.last_time
                 #indiv_waiting_time_list.append(self.env.now - pax.last_time)
-                all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
+                self.all_pax_waiting_times.append(self.env.now - pax.last_arrival_time)
                 if self.env.now - pax.last_arrival_time >= 0.8*HEADWAY: 
                     random_bit = random.choice([0, 1])
                     if random_bit == random.choice([0, 1])==1:
