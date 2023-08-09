@@ -9,7 +9,7 @@ import sys
 import numpy as np
 sys.path.append('HybridPPO')
 
-
+import numpy as np
 import gym
 from gym import spaces
 from stable_baselines3 import PPO, DQN
@@ -76,10 +76,10 @@ def train(args):
                         n_steps=128,
                         n_epochs=10,
                         )
-        # callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
+        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
 
-        # model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
-        model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
+        model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
+        # model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
 
 
         model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
@@ -89,7 +89,7 @@ def train(args):
     with open('action_list_DR_CL.pkl', 'wb') as f:
         pickle.dump(action_list, f)
 
-    return model
+    return model, env
 
 
 
@@ -110,7 +110,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    train(args)
+    model, env = train(args)
+
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
+
+    print("mean_reward: ",mean_reward )
+    print("std_reward: ", std_reward)
+    print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
+    print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
+
 
 
 

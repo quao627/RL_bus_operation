@@ -401,11 +401,15 @@ class Env(gym.Env):
         self.difficulty_level += 1
     
     def adjust_for_difficulty(self):
-        # self.num_stations = self.difficulty_level * 5
-        # self.num_buses = self.difficulty_level * 2
-        N_STATION = self.difficulty_level * 5
-        N_BUS = self.difficulty_level * 7
-        HEADWAY = self.difficulty_level * 180
+        if self.difficulty_level==1:
+            self.holding_only = True
+        elif self.difficulty_level==2:
+            self.holding_only = False
+            self.action_space = Discrete(NUM_ACTION-1)
+        else:
+            self.holding_only = False
+            self.action_space = Discrete(NUM_ACTION)
+
 
 
     def reset(self):
@@ -729,7 +733,15 @@ if __name__ == '__main__':
         pickle.dump(action_list, f)
     print(time.time())
     print('Total waiting time: ', env.acc_waiting_time)
+
+    print('N_BUS: ',N_BUS)
+    print('HEADWAY: ',HEADWAY)
+    print('N_STATION: ',N_STATION)
+    
+    print('Avg passenger waiting time: ', np.mean(all_pax_waiting_times))
+    print('Stdev passenger waiting time: ', np.std(all_pax_waiting_times))
+
     print('Total on bus time: ', env.acc_on_bus_time)
     print('stops allowed to skip: ', num_skipping_stop, ' ', num_total_stop)
-    # print('Total reward: ', total_reward)
-    # print('Cnt: ', cnt)
+    print('Total reward: ', total_reward)
+    print('Cnt: ', cnt)
