@@ -1,7 +1,7 @@
 import sys
 import time
 from copy import deepcopy
-from typing import Any, ClassVar, Dict, Optional, Type, TypeVar, Union
+from typing import Any, ClassVar, Dict, Optional, Type, TypeVar, Union, Tuple错的
 
 import numpy as np
 import torch as th
@@ -19,6 +19,7 @@ from sb3_contrib.common.recurrent.policies import RecurrentActorCriticPolicy
 from sb3_contrib.common.recurrent.type_aliases import RNNStates
 from sb3_contrib.ppo_recurrent.policies import CnnLstmPolicy, MlpLstmPolicy, MultiInputLstmPolicy
 
+from sb3_contrib.common.maskable.utils import get_action_masks, is_masking_supported
 from cl_policies import MaskableRecurrentActorCriticPolicy
 from cl_buffers import MaskableRecurrentDictRolloutBuffer, MaskableRecurrentRolloutBuffer
 
