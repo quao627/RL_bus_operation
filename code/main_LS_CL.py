@@ -18,6 +18,8 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from HybridPPO.hybridppo import HybridPPO
 from sb3_contrib import RecurrentPPO
+from sb3_contrib import MaskablePPO
+from MaskedRecurrentPPO.ppo_recurrent import MaskableRecurrentPPO
 
 # from HybridPPO.hybridppo import *
 from DiscreteEnv_DR_CL import Env
@@ -48,7 +50,7 @@ class CurriculumCallback(BaseCallback):
 
 def train(args):
     
-    assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
+    # assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
 
     for difficulty_level in range(1, 3):  # Modify this to suit the number of difficulty levels in your curriculum
         print(f"Training on difficulty level {difficulty_level}")
@@ -66,7 +68,7 @@ def train(args):
         if not os.path.exists(logdir):
             os.makedirs(logdir)
 
-        model = RecurrentPPO("MlpLstmPolicy", 
+        model = MaskableRecurrentPPO("MaskableMlpLstmPolicy", 
                         env, 
                         verbose=1, 
                         batch_size=args.batch_size, 

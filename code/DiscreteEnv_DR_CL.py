@@ -394,21 +394,28 @@ class Env(gym.Env):
         else:
             self.action_space = Discrete(NUM_ACTION)
         # self.action_space = Discrete(NUM_ACTION)
-    
+        self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
+        
         self.reset()
 
     def increase_difficulty(self):
         self.difficulty_level += 1
     
     def adjust_for_difficulty(self):
+        # if self.difficulty_level==1:
+        #     self.holding_only = True
+        # elif self.difficulty_level==2:
+        #     self.holding_only = False
+        #     self.action_space = Discrete(NUM_ACTION-1)
+        # else:
+        #     self.holding_only = False
+        #     self.action_space = Discrete(NUM_ACTION)
         if self.difficulty_level==1:
-            self.holding_only = True
+            self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
         elif self.difficulty_level==2:
-            self.holding_only = False
-            self.action_space = Discrete(NUM_ACTION-1)
+            self.action_mask = [x < TURNING_AROUND_ACTION for x in self.action_space]
         else:
-            self.holding_only = False
-            self.action_space = Discrete(NUM_ACTION)
+            self.action_mask = [True for x in self.action_space]
 
 
 
@@ -423,7 +430,7 @@ class Env(gym.Env):
         self.action = 0
         self.departure_times = []
         self.data = {station_idx: [] for station_idx in range(N_STATION)}
-
+        self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
 
         self.acc_waiting_time = 0
         self.acc_on_bus_time = 0
@@ -502,8 +509,8 @@ class Env(gym.Env):
         for station in self.stations:
             station.update_pax()
 
-    def action_masks(self):
-        return [True, self.allow_skipping, False]
+    # def action_masks(self):
+    #     return [True, self.allow_skipping, False]
 
     @staticmethod
     def extract_observations(obs):
@@ -619,7 +626,9 @@ class Env(gym.Env):
 
     def get_travel_time(self, station1):
         return self.travel_times[station1.idx, int(self.env.now // TRAVEL_TIME_STEP)]
-
+    
+    def action_masks(self):
+        return self.action_mask
 
 
 with open('pax_data_DR_CL2.pkl', 'wb') as f:
