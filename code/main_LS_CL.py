@@ -81,7 +81,7 @@ def train(args):
                         n_steps=128,
                         n_epochs=10,
                         )
-        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
+        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=0.01)
 
         model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
         # best_reward = -np.inf
