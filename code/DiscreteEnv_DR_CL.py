@@ -413,6 +413,7 @@ class Env(gym.Env):
         # else:
         #     self.holding_only = False
         #     self.action_space = Discrete(NUM_ACTION)
+        print("Difficulty Level Increased")
         if self.difficulty_level==1:
             self.action_mask = [x < SKIPPING_ACTION for x in range(self.action_space.n)]
         elif self.difficulty_level==2:
