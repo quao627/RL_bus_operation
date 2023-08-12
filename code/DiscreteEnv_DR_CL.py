@@ -418,7 +418,7 @@ class Env(gym.Env):
         elif self.difficulty_level==2:
             self.action_mask = [x < TURNING_AROUND_ACTION for x in range(self.action_space.n)]
         else:
-            self.action_mask = [True for x in self.action_space]
+            self.action_mask = [True for x in range(self.action_space.n)]
 
 
 
