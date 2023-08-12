@@ -302,6 +302,7 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         if eval_env is not None and self.seed is not None:
             eval_env.seed(self.seed)
 
+        print(eval_env)
         eval_env = self._get_eval_env(eval_env)
 
         # Configure logger's outputs if no logger was passed

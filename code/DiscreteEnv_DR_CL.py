@@ -369,10 +369,22 @@ class Env(gym.Env):
         self.acc_waiting_time = 0
         self.acc_on_bus_time = 0
 
+        
         self.mode = mode
         self.holding_only = holding_only
         self.skipping_only = skipping_only
         self.turning_only = turning_only
+        
+        self.observation_space = Box(low=-1e4, high=1e4, shape=(N_BUS, OBSERVATION_DIM))
+        if holding_only:
+            self.action_space = Discrete(NUM_ACTION - 2)
+        elif skipping_only:
+            self.action_space = Discrete(2)
+        elif turning_only:
+            self.action_space = Discrete(2)
+        else:
+            self.action_space = Discrete(NUM_ACTION)
+            
         self.difficulty_level = difficulty_level
         self.last_difficulty_increase = 0
         self.adjust_for_difficulty()
@@ -384,17 +396,8 @@ class Env(gym.Env):
             self.env.step()
         self.ready = False
 
-        self.observation_space = Box(low=-1e4, high=1e4, shape=(N_BUS, OBSERVATION_DIM))
-        if holding_only:
-            self.action_space = Discrete(NUM_ACTION - 2)
-        elif skipping_only:
-            self.action_space = Discrete(2)
-        elif turning_only:
-            self.action_space = Discrete(2)
-        else:
-            self.action_space = Discrete(NUM_ACTION)
         # self.action_space = Discrete(NUM_ACTION)
-        self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
+        self.action_mask = [x < SKIPPING_ACTION for x in range(self.action_space.n)]
         
         self.reset()
 
@@ -411,9 +414,9 @@ class Env(gym.Env):
         #     self.holding_only = False
         #     self.action_space = Discrete(NUM_ACTION)
         if self.difficulty_level==1:
-            self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
+            self.action_mask = [x < SKIPPING_ACTION for x in range(self.action_space.n)]
         elif self.difficulty_level==2:
-            self.action_mask = [x < TURNING_AROUND_ACTION for x in self.action_space]
+            self.action_mask = [x < TURNING_AROUND_ACTION for x in range(self.action_space.n)]
         else:
             self.action_mask = [True for x in self.action_space]
 
@@ -430,7 +433,7 @@ class Env(gym.Env):
         self.action = 0
         self.departure_times = []
         self.data = {station_idx: [] for station_idx in range(N_STATION)}
-        self.action_mask = [x < SKIPPING_ACTION for x in self.action_space]
+        self.action_mask = [x < SKIPPING_ACTION for x in range(self.action_space.n)]
 
         self.acc_waiting_time = 0
         self.acc_on_bus_time = 0
