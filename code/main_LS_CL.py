@@ -36,10 +36,13 @@ class CurriculumCallback(BaseCallback):
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
             # Evaluate policy training performance
-            mean_reward, std_reward = evaluate_policy(self.model, self.training_env, n_eval_episodes=10)
+            vec_env = self.model.get_env()
+            mean_reward, std_reward = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
             if self.verbose > 0:
                 print(f"N timesteps: {self.num_timesteps} mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
 
+            print('best mean reward: ', self.best_mean_reward)
+            print('mean reward: ', mean_reward)
             # Increase difficulty if performance threshold is exceeded
             if mean_reward > self.best_mean_reward + self.difficulty_increase_thresh:
                 self.best_mean_reward = mean_reward
@@ -81,7 +84,10 @@ def train(args):
         callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
 
         model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
-        # model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
+        # best_reward = -np.inf
+        # for i in range(0, args.num_steps, 1000):
+        #     model.learn(total_timesteps=args.check_freq, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
+            
 
 
         model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
@@ -109,6 +115,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=128, help="batch size")
     parser.add_argument("--num_steps", type=int, default=300000, help="number of steps")
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
+    parser.add_argument("--check_freq", type=int, default=2000, help="frequency for checking performance")
 
     args = parser.parse_args()
 

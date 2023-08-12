@@ -34,7 +34,6 @@ class MaskableRecurrentActorCriticPolicy(RecurrentActorCriticPolicy):
         deterministic: bool = False,
         action_masks: Optional[np.ndarray] = None
     ) -> Tuple[th.Tensor, th.Tensor, th.Tensor, RNNStates]:
-        
         features = self.extract_features(obs)
         # latent_pi, latent_vf = self.mlp_extractor(features)
         latent_pi, lstm_states_pi = self._process_sequence(features, lstm_states.pi, episode_starts, self.lstm_actor)
@@ -92,6 +91,17 @@ class MaskableRecurrentActorCriticPolicy(RecurrentActorCriticPolicy):
 
         return self.action_dist.proba_distribution(action_logits=mean_actions)
 
+    def _predict(
+        self,
+        observation: th.Tensor,
+        lstm_states: Tuple[th.Tensor, th.Tensor],
+        episode_starts: th.Tensor,
+        deterministic: bool = False,
+        action_masks: Optional[np.ndarray] = None
+    ) -> Tuple[th.Tensor, Tuple[th.Tensor, ...]]:
+        distribution, lstm_states = self.get_distribution(observation, lstm_states, episode_starts, action_masks)
+        return distribution.get_actions(deterministic=deterministic), lstm_states
+    
     def predict(
         self,
         observation: Union[np.ndarray, Dict[str, np.ndarray]],
@@ -102,23 +112,48 @@ class MaskableRecurrentActorCriticPolicy(RecurrentActorCriticPolicy):
     ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
         
         self.set_training_mode(False)
+
         observation, vectorized_env = self.obs_to_tensor(observation)
 
+        if isinstance(observation, dict):
+            n_envs = observation[list(observation.keys())[0]].shape[0]
+        else:
+            n_envs = observation.shape[0]
+        # state : (n_layers, n_envs, dim)
+        if state is None:
+            # Initialize hidden states to zeros
+            state = np.concatenate([np.zeros(self.lstm_hidden_state_shape) for _ in range(n_envs)], axis=1)
+            state = (state, state)
+
+        if episode_start is None:
+            episode_start = np.array([False for _ in range(n_envs)])
+
         with th.no_grad():
-            actions, _, _, _ = self.forward(observation, state, episode_start, deterministic, action_masks)
-            actions = actions.cpu().numpy()
+            # Convert to PyTorch tensors
+            states = th.tensor(state[0]).float().to(self.device), th.tensor(state[1]).float().to(self.device)
+            episode_starts = th.tensor(episode_start).float().to(self.device)
+            actions, states = self._predict(
+                observation, lstm_states=states, episode_starts=episode_starts, deterministic=deterministic, action_masks=action_masks
+            )
+            states = (states[0].cpu().numpy(), states[1].cpu().numpy())
+
+        # Convert to numpy
+        actions = actions.cpu().numpy()
 
         if isinstance(self.action_space, gym.spaces.Box):
             if self.squash_output:
+                # Rescale to proper domain when using squashing
                 actions = self.unscale_action(actions)
             else:
+                # Actions could be on arbitrary scale, so clip the actions to avoid
+                # out of bound error (e.g. if sampling from a Gaussian distribution)
                 actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
+        # Remove batch dimension if needed
         if not vectorized_env:
-            if state is not None:
-                raise ValueError("Error: The environment must be vectorized when using recurrent policies.")
             actions = actions.squeeze(axis=0)
-        return actions, None
+
+        return actions, states
 
     def evaluate_actions(
         self,

@@ -105,6 +105,7 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         target_kl: Optional[float] = None,
         stats_window_size: int = 100,
         tensorboard_log: Optional[str] = None,
+        create_eval_env: bool = False,
         policy_kwargs: Optional[Dict[str, Any]] = None,
         verbose: int = 0,
         seed: Optional[int] = None,
@@ -124,6 +125,7 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
             use_sde=use_sde,
             sde_sample_freq=sde_sample_freq,
             tensorboard_log=tensorboard_log,
+            create_eval_env=False,
             policy_kwargs=policy_kwargs,
             verbose=verbose,
             seed=seed,
@@ -250,6 +252,7 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         callback.init_callback(self)
         return callback
 
+
     def _setup_learn(
         self,
         total_timesteps: int,
@@ -302,7 +305,6 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         if eval_env is not None and self.seed is not None:
             eval_env.seed(self.seed)
 
-        print(eval_env)
         eval_env = self._get_eval_env(eval_env)
 
         # Configure logger's outputs if no logger was passed
@@ -592,7 +594,11 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         total_timesteps: int,
         callback: MaybeCallback = None,
         log_interval: int = 1,
+        eval_env: Optional[GymEnv] = None,
+        eval_freq: int = -1,
+        n_eval_episodes: int = 5,
         tb_log_name: str = "RecurrentPPO",
+        eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,
         use_masking: bool = True,
@@ -600,11 +606,14 @@ class MaskableRecurrentPPO(OnPolicyAlgorithm):
         iteration = 0
 
         total_timesteps, callback = self._setup_learn(
-            total_timesteps,
-            callback,
-            reset_num_timesteps,
-            tb_log_name,
-            progress_bar,
+            total_timesteps, 
+            eval_env, 
+            callback, 
+            eval_freq, 
+            n_eval_episodes, 
+            eval_log_path, 
+            reset_num_timesteps, 
+            tb_log_name, 
         )
                 
         callback.on_training_start(locals(), globals())
