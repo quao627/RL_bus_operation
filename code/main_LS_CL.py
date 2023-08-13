@@ -44,6 +44,7 @@ class CurriculumCallback(BaseCallback):
             print('best mean reward: ', self.best_mean_reward)
             print('mean reward: ', mean_reward)
             # Increase difficulty if performance threshold is exceeded
+            # TODO: Do we need this or something else 
             if mean_reward > self.best_mean_reward + self.difficulty_increase_thresh:
                 self.best_mean_reward = mean_reward
                 self.training_env.envs[0].increase_difficulty()
@@ -54,43 +55,42 @@ class CurriculumCallback(BaseCallback):
 def train(args):
     
     # assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
+    difficulty_level = 1
+    print(f"Training on difficulty level {difficulty_level}")
 
-    for difficulty_level in range(1, 3):  # Modify this to suit the number of difficulty levels in your curriculum
-        print(f"Training on difficulty level {difficulty_level}")
+    config = {'holding_only': args.holding_only,
+                'skipping_only': args.skipping_only, 
+                'turning_only': args.turning_only,
+                'mode': args.mode,
+                'difficulty_level': difficulty_level}  
+    env = Env(**config)
 
-        config = {'holding_only': args.holding_only,
-                    'skipping_only': args.skipping_only, 
-                    'turning_only': args.turning_only,
-                    'mode': args.mode,
-                    'difficulty_level': difficulty_level}  
-        env = Env(**config)
+    model_dir = args.model_dir + args.mode
+    logdir = args.log_dir
 
-        model_dir = args.model_dir + args.mode
-        logdir = args.log_dir
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
+    model = MaskableRecurrentPPO("MaskableMlpLstmPolicy", 
+                    env, 
+                    verbose=1, 
+                    batch_size=args.batch_size, 
+                    tensorboard_log=logdir,
+                    learning_rate=args.learning_rate,
+                    gamma=args.gamma,
+                    n_steps=128,
+                    n_epochs=10,
+                    )
+    callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=0.01)
 
-        model = MaskableRecurrentPPO("MaskableMlpLstmPolicy", 
-                        env, 
-                        verbose=1, 
-                        batch_size=args.batch_size, 
-                        tensorboard_log=logdir,
-                        learning_rate=args.learning_rate,
-                        gamma=args.gamma,
-                        n_steps=128,
-                        n_epochs=10,
-                        )
-        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=0.01)
-
-        model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
-        # best_reward = -np.inf
-        # for i in range(0, args.num_steps, 1000):
-        #     model.learn(total_timesteps=args.check_freq, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
-            
+    model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
+    # best_reward = -np.inf
+    # for i in range(0, args.num_steps, 1000):
+    #     model.learn(total_timesteps=args.check_freq, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
+        
 
 
-        model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
+    model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
     print("....")
     with open('data_DR_CL.pkl', 'wb') as f:
         pickle.dump(env.data, f)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser.add_argument("--log_dir", type=str, default="logs", help="log directory")
     parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
     parser.add_argument("--batch_size", type=int, default=128, help="batch size")
-    parser.add_argument("--num_steps", type=int, default=300000, help="number of steps")
+    parser.add_argument("--num_steps", type=int, default=60000, help="number of steps")
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
     parser.add_argument("--check_freq", type=int, default=2000, help="frequency for checking performance")
 

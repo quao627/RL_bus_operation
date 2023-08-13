@@ -402,8 +402,41 @@ class Env(gym.Env):
         self.reset()
 
     def increase_difficulty(self):
+        print("Increasing Difficulty")
         self.difficulty_level += 1
-    
+        if self.difficulty_level==1:
+            print("Currently Difficulty Level 1")
+            self.action_mask = [x < SKIPPING_ACTION for x in range(self.action_space.n)]
+        elif self.difficulty_level==2:
+            print("Currently Difficulty Level 2")
+            self.action_mask = [x < 2 for x in range(self.action_space.n)]
+        elif self.difficulty_level==3:
+            print("Currently Difficulty Level 3")
+            self.action_mask = [x < 3 for x in range(self.action_space.n)]
+        elif self.difficulty_level==4:
+            print("Currently Difficulty Level 4")
+            self.action_mask = [x < 4 for x in range(self.action_space.n)]
+        elif self.difficulty_level==5:
+            print("Currently Difficulty Level 5")
+            self.action_mask = [x < 5 for x in range(self.action_space.n)]
+        elif self.difficulty_level==6:
+            print("Currently Difficulty Level 6")
+            self.action_mask = [x < 6 for x in range(self.action_space.n)]
+        elif self.difficulty_level==7:
+            print("Currently Difficulty Level 7")
+            self.action_mask = [x < 7 for x in range(self.action_space.n)]
+        elif self.difficulty_level==8:
+            print("Currently Difficulty Level 8")
+            self.action_mask = [x < 8 for x in range(self.action_space.n)]
+        elif self.difficulty_level==9:
+            print("Currently Difficulty Level 9")
+            self.action_mask = [x < 10 for x in range(self.action_space.n)]
+        elif self.difficulty_level==10:
+            print("Currently Difficulty Level 10")
+            self.action_mask = [x < TURNING_AROUND_ACTION for x in range(self.action_space.n)]
+        else:
+            print("Currently Difficulty Level 11")
+            self.action_mask = [True for x in range(self.action_space.n)]    
     def adjust_for_difficulty(self):
         # if self.difficulty_level==1:
         #     self.holding_only = True
