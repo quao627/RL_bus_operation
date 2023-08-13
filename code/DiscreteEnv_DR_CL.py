@@ -450,13 +450,10 @@ class Env(gym.Env):
         for pax in self.passengers:
             if pax.last_time < self.env.now:
                 pax.last_time = self.env.now
-        if self.should_increase_difficulty():
-            self.difficulty_level += 1
-            self.last_difficulty_increase = self.env.now
-            self.adjust_for_difficulty()
+        
+        self.adjust_for_difficulty()
         return obs
-    def should_increase_difficulty(self):
-        return self.env.now - self.last_difficulty_increase > 1000
+    
     def arange_stations(self) -> None:
         for index, station in enumerate(self.stations):
             if index == len(self.stations)-1:

@@ -32,6 +32,7 @@ class CurriculumCallback(BaseCallback):
         self.check_freq = check_freq
         self.difficulty_increase_thresh = difficulty_increase_thresh
         self.best_mean_reward = -np.inf
+        self.cur_timestep = 0
 
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
@@ -47,7 +48,14 @@ class CurriculumCallback(BaseCallback):
             if mean_reward > self.best_mean_reward + self.difficulty_increase_thresh:
                 self.best_mean_reward = mean_reward
                 self.training_env.envs[0].increase_difficulty()
-
+                
+            self.cur_timestep += self.check_freq
+            if self.cur_timestep > 100000:
+                if self.training_env.envs[0].difficulty_level < 1:
+                    self.training_env.envs[0].difficulty_level = 1
+            if self.cur_timestep > 200000:
+                if self.training_env.envs[0].difficulty_level < 2:
+                    self.training_env.envs[0].difficulty_level = 2
         return True
 
 
@@ -81,7 +89,7 @@ def train(args):
                         n_steps=128,
                         n_epochs=10,
                         )
-        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=10.0)
+        callback = CurriculumCallback(check_freq=1000, difficulty_increase_thresh=0.1)
 
         model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
         # best_reward = -np.inf
