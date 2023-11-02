@@ -1,3 +1,6 @@
+
+
+
 import time
 import os
 import argparse
@@ -22,50 +25,37 @@ from sb3_contrib import MaskablePPO
 from MaskedRecurrentPPO.ppo_recurrent import MaskableRecurrentPPO
 
 # from HybridPPO.hybridppo import *
-from DiscreteEnv_DR_CL_action import Env
+from DiscreteEnv_DR_CL_action2 import Env
 # from BusBunchingEnv import Env
 action_list=[]
 
 class CurriculumCallback(BaseCallback):
-    def __init__(self, check_freq: int, difficulty_increase_thresh: float, verbose=1):
+    def __init__(self, check_freq: int, action_difficulty_thresholds: list, env, verbose=1):
         super(CurriculumCallback, self).__init__(verbose)
         self.check_freq = check_freq
-        self.difficulty_increase_thresh = difficulty_increase_thresh
+        self.action_difficulty_thresholds = action_difficulty_thresholds
+        self.env = env
         self.best_mean_reward = -np.inf
-
+    
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
             # Evaluate policy training performance
             vec_env = self.model.get_env()
             mean_reward, std_reward = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+            curr_difficulty_level = self.env.difficulty_level
             if self.verbose > 0:
                 print(f"N timesteps: {self.num_timesteps} mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
 
-            print('best mean reward: ', self.best_mean_reward)
-            print('mean reward: ', mean_reward)
             # Increase difficulty if performance threshold is exceeded
-            # TODO: Do we need this or something else
-            # There might be some problem of this code 
-            if mean_reward >= self.best_mean_reward + self.difficulty_increase_thresh:
+            # TODO: Do we need this or something else 
+            if mean_reward > self.best_mean_reward + self.action_difficulty_thresholds[curr_difficulty_level]:
                 self.best_mean_reward = mean_reward
                 self.training_env.envs[0].increase_difficulty()
 
         return True
 
 
-def train(args):
-    
-    # assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
-    difficulty_level = 1
-    print(f"Training on difficulty level {difficulty_level}")
-
-    config = {'holding_only': args.holding_only,
-                'skipping_only': args.skipping_only, 
-                'turning_only': args.turning_only,
-                'mode': args.mode,
-                'difficulty_level': difficulty_level}  
-    env = Env(**config)
-
+def train(args, env, difficulty_level, action_values, action_difficulty_thresholds):
     model_dir = args.model_dir + args.mode
     logdir = args.log_dir
 
@@ -82,14 +72,9 @@ def train(args):
                     n_steps=128,
                     n_epochs=10,
                     )
-    callback = CurriculumCallback(check_freq=500, difficulty_increase_thresh=0.02)
+    callback = CurriculumCallback(check_freq=1000, action_difficulty_thresholds=action_difficulty_thresholds, env=env)
 
     model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
-    # best_reward = -np.inf
-    # for i in range(0, args.num_steps, 1000):
-    #     model.learn(total_timesteps=args.check_freq, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}")
-        
-
 
     model.save(f"ppo_recurrent_difficulty_{difficulty_level}")
     print("....")
@@ -101,15 +86,29 @@ def train(args):
     return model, env
 
 
+def process_action_masks(action_masks_levels):
+    action_masks_levels = action_masks_levels.split()
+    action_masks = []
+
+    for level_mask in action_masks_levels:
+        level_mask = level_mask.split(',')
+        level_mask = [int(action) for action in level_mask]
+        action_masks.append(level_mask)
+        
+    return action_masks 
+
+def setup_env(args, difficulty_level, action_values, action_difficulty_thresholds):
+    # Setting up Environment
+    print(f"Training on difficulty level {difficulty_level}")
+    env = Env(mode=args.mode, difficulty_level=difficulty_level, action_values=action_values, action_difficulty_thresholds=action_difficulty_thresholds)
+    return env
+
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--mode", type=str, default="waiting_time_station", help="waiting_time_total, waiting_time_station, num_pax")
-    parser.add_argument("--holding_only", action="store_true", default=False, help="only holding")
-    parser.add_argument("--skipping_only", action="store_true", default=False, help="only skipping")
-    parser.add_argument("--turning_only", action="store_true", default=False, help="only turning")
     parser.add_argument("--model_dir", type=str, default="models/PPO", help="model directory")
     parser.add_argument("--log_dir", type=str, default="logs", help="log directory")
     parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
@@ -117,10 +116,22 @@ if __name__ == '__main__':
     parser.add_argument("--num_steps", type=int, default=60000, help="number of steps")
     parser.add_argument("--gamma", type=float, default=0.99, help="discount factor")
     parser.add_argument("--check_freq", type=int, default=2000, help="frequency for checking performance")
+    
+    # Curriculum Learning Args
+    parser.add_argument("--action_difficulty_levels", type=int, default=3, help="levels of difficulty")
+    parser.add_argument("--action_mask_levels", type=str, default="0,1,2,3 1,2,3 0,1,2,4", help="levels of difficulty")
+    parser.add_argument("--action_difficulty_thresholds", type=str, default="0.5,0.1,0.5", help="levels of difficulty")
+     
 
     args = parser.parse_args()
-
-    model, env = train(args)
+    
+    action_values = process_action_masks(args.action_mask_levels)
+    action_difficulty_thresholds = [float(threshold) for threshold in args.action_difficulty_thresholds.split(',')]
+    print('action_values: ', action_values)
+    print('difficulty_thresholds: ', action_difficulty_thresholds)
+    difficulty_level = 0
+    env = setup_env(args, difficulty_level, action_values, action_difficulty_thresholds)
+    model, env = train(args, env, difficulty_level, action_values, action_difficulty_thresholds)
 
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)
 
@@ -128,30 +139,4 @@ if __name__ == '__main__':
     print("std_reward: ", std_reward)
     print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
     print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
-
-
-
-
-    # env = gym.make('Moving-v0')
-    # if recording
-    # env = gym.wrappers.Monitor(env, "./video", force=True)
-    # env.metadata["render.modes"] = ["human", "rgb_array"]
-    
-    # env.reset()
-
-    # ACTION_SPACE = env.action_space[0].n
-    # PARAMETERS_SPACE = env.action_space[1].shape[0]
-    # OBSERVATION_SPACE = env.observation_space.shape[0]
-
-    # model = PPO.load(f"model_dir/{mode}")
-
-    # obs = env.reset()
-    # while True:
-    #     action = (0, 0)
-    #     obs, rewards, dones, info = env.step(action)
-    #     # if rendering
-    #     time.sleep(0.1)
-
-    # time.sleep(1)
-    # env.close()
-
+  
