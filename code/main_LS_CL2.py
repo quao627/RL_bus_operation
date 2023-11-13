@@ -29,6 +29,8 @@ from DiscreteEnv_DR_CL_action2 import Env
 # from BusBunchingEnv import Env
 action_list=[]
 
+STEP_LIMIT = 40000
+
 class CurriculumCallback(BaseCallback):
     def __init__(self, check_freq: int, action_difficulty_thresholds: list, env, verbose=1):
         super(CurriculumCallback, self).__init__(verbose)
@@ -36,22 +38,41 @@ class CurriculumCallback(BaseCallback):
         self.action_difficulty_thresholds = action_difficulty_thresholds
         self.env = env
         self.best_mean_reward = -np.inf
+        self.current_num_timesteps = 0
     
     def _on_step(self) -> bool:
+        self.current_num_timesteps += 1
         if self.n_calls % self.check_freq == 0:
             # Evaluate policy training performance
             vec_env = self.model.get_env()
-            mean_reward, std_reward = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+            # mean_reward, std_reward = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+            mean_reward_sum = 0
+            std_reward_sum = 0
+            NUM_EVA=3
+            for i in range(NUM_EVA):
+                mean_reward_i, std_reward_i = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+                mean_reward_sum += mean_reward_i
+                std_reward_sum += std_reward_i
+            mean_reward = mean_reward_sum/NUM_EVA
+            std_reward = std_reward_sum/NUM_EVA
             curr_difficulty_level = self.env.difficulty_level
             if self.verbose > 0:
                 print(f"N timesteps: {self.num_timesteps} mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
 
             # Increase difficulty if performance threshold is exceeded
             # TODO: Do we need this or something else 
-            if mean_reward > self.best_mean_reward + self.action_difficulty_thresholds[curr_difficulty_level]:
-                self.best_mean_reward = mean_reward
-                self.training_env.envs[0].increase_difficulty()
+            # if mean_reward > self.best_mean_reward + self.action_difficulty_thresholds[curr_difficulty_level]:
+            #     self.best_mean_reward = mean_reward
+            #     self.training_env.envs[0].increase_difficulty()
+            if curr_difficulty_level < 2:
+                if mean_reward >= self.action_difficulty_thresholds[curr_difficulty_level] or self.current_num_timesteps>=STEP_LIMIT:
+                    print('mean_reward: ', mean_reward)
+                    print('self.best_mean_reward: ', self.best_mean_reward)
+                    print('self.current_num_timesteps: ', self.current_num_timesteps)
 
+                    self.best_mean_reward = mean_reward
+                    self.training_env.envs[0].increase_difficulty()
+                    self.current_num_timesteps = 0
         return True
 
 
@@ -72,7 +93,7 @@ def train(args, env, difficulty_level, action_values, action_difficulty_threshol
                     n_steps=128,
                     n_epochs=10,
                     )
-    callback = CurriculumCallback(check_freq=1000, action_difficulty_thresholds=action_difficulty_thresholds, env=env)
+    callback = CurriculumCallback(check_freq=2000, action_difficulty_thresholds=action_difficulty_thresholds, env=env)
 
     model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
 
@@ -137,6 +158,6 @@ if __name__ == '__main__':
 
     print("mean_reward: ",mean_reward )
     print("std_reward: ", std_reward)
-    print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
-    print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
+    # print('Avg passenger waiting time: ', np.mean(env.all_pax_waiting_times))
+    # print('Stdev passenger waiting time: ', np.std(env.all_pax_waiting_times))
   
