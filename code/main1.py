@@ -22,6 +22,35 @@ import numpy as np
 from DiscreteEnv import Env
 
 
+class EvaluationCallback(BaseCallback):
+    def __init__(self, check_freq: int,  env, verbose=1):
+        super(EvaluationCallback, self).__init__(verbose)
+        self.check_freq = check_freq
+        self.env = env
+    
+    def _on_step(self) -> bool:
+        if self.n_calls % self.check_freq == 0:
+            # Evaluate policy training performance
+            vec_env = self.model.get_env()
+            # mean_reward, std_reward = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+            mean_reward_sum = 0
+            std_reward_sum = 0
+            NUM_EVA=3
+            for i in range(NUM_EVA):
+                mean_reward_i, std_reward_i = evaluate_policy(self.model, vec_env, n_eval_episodes=1, warn=False)
+                mean_reward_sum += mean_reward_i
+                std_reward_sum += std_reward_i
+            mean_reward = mean_reward_sum/NUM_EVA
+            std_reward = std_reward_sum/NUM_EVA
+            if self.verbose > 0:
+                print(f"N timesteps: {self.num_timesteps} mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+            # Increase difficulty if performance threshold is exceeded
+            # TODO: Do we need this or something else 
+            # if mean_reward > self.best_mean_reward + self.action_difficulty_thresholds[curr_difficulty_level]:
+            #     self.best_mean_reward = mean_reward
+            #     self.training_env.envs[0].increase_difficulty()
+        return True
+
 def train(args):
 
     assert args.holding_only + args.skipping_only + args.turning_only <= 1, "Only one of the three can be true"
@@ -45,8 +74,11 @@ def train(args):
                     tensorboard_log=logdir,
                     learning_rate=args.learning_rate,
                     gamma=args.gamma,)
+    callback = EvaluationCallback(check_freq=512, env=env) # TODO
 
-    model.learn(total_timesteps=args.num_steps, tb_log_name="ppo")
+    model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo", callback=callback)
+
+
     model.save(model_dir)
 
     return model, env

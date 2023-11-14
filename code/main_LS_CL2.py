@@ -93,7 +93,7 @@ def train(args, env, difficulty_level, action_values, action_difficulty_threshol
                     n_steps=128,
                     n_epochs=10,
                     )
-    callback = CurriculumCallback(check_freq=2000, action_difficulty_thresholds=action_difficulty_thresholds, env=env)
+    callback = CurriculumCallback(check_freq=512, action_difficulty_thresholds=action_difficulty_thresholds, env=env)
 
     model.learn(total_timesteps=args.num_steps, tb_log_name=f"ppo_lstm_difficulty_{difficulty_level}", callback=callback)
 
